@@ -1,0 +1,74 @@
+service: job-system
+
+custom:
+  jobsTableName: ${self:service}-${sls:stage}-jobs
+  jobsQueueName: ${self:service}-${sls:stage}-jobs-queue
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: eu-central-1
+  stage: dev
+  environment:
+    JOBS_TABLE_NAME: ${self:custom.jobsTableName}
+    JOBS_QUEUE_URL:
+      Ref: JobsQueue
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+          Resource:
+            - !GetAtt JobsTable.Arn
+        - Effect: Allow
+          Action:
+            - sqs:SendMessage
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+            - sqs:GetQueueAttributes
+          Resource:
+            - !GetAtt JobsQueue.Arn
+
+functions:
+  createJob:
+    handler: src/handlers/createJob.handler
+    events:
+      - httpApi:
+          path: /jobs
+          method: post
+
+  getJob:
+    handler: src/handlers/getJob.handler
+    events:
+      - httpApi:
+          path: /jobs/{id}
+          method: get
+
+  processJob:
+    handler: src/handlers/processJob.handler
+    events:
+      - sqs:
+          arn: !GetAtt JobsQueue.Arn
+          batchSize: 1
+
+resources:
+  Resources:
+    JobsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.jobsTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+
+    JobsQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.jobsQueueName}
