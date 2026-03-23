@@ -1,6 +1,7 @@
 import { jobRepository } from "../repositories/jobRepository";
+import { randomUUID } from "node:crypto";
 import type { Job, JobMessage } from "../types/job";
-// Bu dosya SQS mesajlarını işlemek ve ilgili işleri güncellemek için kullanılır.
+
 type SqsEvent = {
   Records: Array<{
     body: string;
@@ -37,14 +38,14 @@ export async function handler(event: SqsEvent): Promise<void> {
 
     const job = await jobRepository.claimJobIfPending(message.jobId);
 
-if (!job) {
-  console.log(`Job ${message.jobId} is missing or already claimed/processed`);
-  continue;
-}
+    if (!job) {
+      console.log(`Job ${message.jobId} is missing or already claimed/processed`);
+      continue;
+    }
 
-try {
-  delete job.error;
-  delete job.result;
+    try {
+      delete job.error;
+      delete job.result;
 
       if (job.payload["shouldFail"] === true) {
         throw new Error("Job was asked to fail");
@@ -54,6 +55,7 @@ try {
       job.result = {
         message: "Job processed successfully",
         processedAt: job.updatedAt,
+        executionId: randomUUID(),
       };
       await jobRepository.save(job);
     } catch (error) {
@@ -61,6 +63,7 @@ try {
       job.error = error instanceof Error ? error.message : "Unknown error";
       delete job.result;
       await jobRepository.save(job);
+      throw error;
     }
   }
 }

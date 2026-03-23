@@ -55,6 +55,7 @@ export async function handler(event: ApiEvent): Promise<ApiResponse> {
     id: randomUUID(),
     status: "pending",
     payload,
+    attemptCount: 0,
     createdAt: now,
     updatedAt: now,
   };

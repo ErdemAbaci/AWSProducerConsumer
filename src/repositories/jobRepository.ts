@@ -46,7 +46,7 @@ export const jobRepository = {
         new UpdateCommand({
           TableName: getTableName(),
           Key: { id },
-          UpdateExpression: "SET #status = :processing, updatedAt = :updatedAt",
+          UpdateExpression: "SET #status = :processing, updatedAt = :updatedAt, attemptCount = attemptCount + :increment",
           ConditionExpression: "#status = :pending",
           ExpressionAttributeNames: {
             "#status": "status",
@@ -55,6 +55,7 @@ export const jobRepository = {
             ":pending": "pending",
             ":processing": "processing",
             ":updatedAt": new Date().toISOString(),
+            ":increment": 1,
           },
           ReturnValues: "ALL_NEW",
         }),

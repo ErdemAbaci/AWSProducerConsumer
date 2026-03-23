@@ -32,9 +32,9 @@ var dynamoDb = import_lib_dynamodb.DynamoDBDocumentClient.from(new import_client
   }
 });
 function getTableName() {
-  const tableName = process.env.JOBS_TABLE;
+  const tableName = process.env.JOBS_TABLE_NAME;
   if (!tableName) {
-    throw new Error("JOBS_TABLE environment variable is required");
+    throw new Error("JOBS_TABLE_NAME environment variable is required");
   }
   return tableName;
 }
@@ -55,10 +55,39 @@ var jobRepository = {
       })
     );
     return response.Item;
+  },
+  async claimJobIfPending(id) {
+    try {
+      const response = await dynamoDb.send(
+        new import_lib_dynamodb.UpdateCommand({
+          TableName: getTableName(),
+          Key: { id },
+          UpdateExpression: "SET #status = :processing, updatedAt = :updatedAt, attemptCount = attemptCount + :increment",
+          ConditionExpression: "#status = :pending",
+          ExpressionAttributeNames: {
+            "#status": "status"
+          },
+          ExpressionAttributeValues: {
+            ":pending": "pending",
+            ":processing": "processing",
+            ":updatedAt": (/* @__PURE__ */ new Date()).toISOString(),
+            ":increment": 1
+          },
+          ReturnValues: "ALL_NEW"
+        })
+      );
+      return response.Attributes;
+    } catch (error) {
+      if (error?.name === "ConditionalCheckFailedException") {
+        return void 0;
+      }
+      throw error;
+    }
   }
 };
 
 // src/handlers/processJob.ts
+var import_node_crypto = require("node:crypto");
 function parseMessage(body) {
   try {
     const parsed = JSON.parse(body);
@@ -81,23 +110,22 @@ async function handler(event) {
       console.error("Skipping invalid SQS message", record.body);
       continue;
     }
-    const job = await jobRepository.getById(message.jobId);
+    const job = await jobRepository.claimJobIfPending(message.jobId);
     if (!job) {
-      console.error(`Job ${message.jobId} was not found`);
+      console.log(`Job ${message.jobId} is missing or already claimed/processed`);
       continue;
     }
     try {
-      setJobState(job, "processing");
       delete job.error;
       delete job.result;
-      await jobRepository.save(job);
       if (job.payload["shouldFail"] === true) {
         throw new Error("Job was asked to fail");
       }
       setJobState(job, "completed");
       job.result = {
         message: "Job processed successfully",
-        processedAt: job.updatedAt
+        processedAt: job.updatedAt,
+        executionId: (0, import_node_crypto.randomUUID)()
       };
       await jobRepository.save(job);
     } catch (error) {
@@ -105,6 +133,7 @@ async function handler(event) {
       job.error = error instanceof Error ? error.message : "Unknown error";
       delete job.result;
       await jobRepository.save(job);
+      throw error;
     }
   }
 }

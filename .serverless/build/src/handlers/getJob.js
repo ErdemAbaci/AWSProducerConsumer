@@ -32,9 +32,9 @@ var dynamoDb = import_lib_dynamodb.DynamoDBDocumentClient.from(new import_client
   }
 });
 function getTableName() {
-  const tableName = process.env.JOBS_TABLE;
+  const tableName = process.env.JOBS_TABLE_NAME;
   if (!tableName) {
-    throw new Error("JOBS_TABLE environment variable is required");
+    throw new Error("JOBS_TABLE_NAME environment variable is required");
   }
   return tableName;
 }
@@ -55,6 +55,34 @@ var jobRepository = {
       })
     );
     return response.Item;
+  },
+  async claimJobIfPending(id) {
+    try {
+      const response = await dynamoDb.send(
+        new import_lib_dynamodb.UpdateCommand({
+          TableName: getTableName(),
+          Key: { id },
+          UpdateExpression: "SET #status = :processing, updatedAt = :updatedAt, attemptCount = attemptCount + :increment",
+          ConditionExpression: "#status = :pending",
+          ExpressionAttributeNames: {
+            "#status": "status"
+          },
+          ExpressionAttributeValues: {
+            ":pending": "pending",
+            ":processing": "processing",
+            ":updatedAt": (/* @__PURE__ */ new Date()).toISOString(),
+            ":increment": 1
+          },
+          ReturnValues: "ALL_NEW"
+        })
+      );
+      return response.Attributes;
+    } catch (error) {
+      if (error?.name === "ConditionalCheckFailedException") {
+        return void 0;
+      }
+      throw error;
+    }
   }
 };
 
@@ -78,7 +106,15 @@ async function handler(event) {
     if (!job) {
       return json(404, { message: "Job not found" });
     }
-    return json(200, job);
+    return json(200, {
+      id: job.id,
+      status: job.status,
+      attemptCount: job.attemptCount,
+      createdAt: job.createdAt,
+      updatedAt: job.updatedAt,
+      result: job.result,
+      error: job.error
+    });
   } catch (error) {
     console.error("Failed to load job", error);
     return json(500, { message: "Could not load job" });

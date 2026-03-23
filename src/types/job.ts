@@ -10,6 +10,7 @@ export interface Job {
   error?: string;
   createdAt: string;
   updatedAt: string;
+  attemptCount: number;
 }
 
 export interface JobMessage {

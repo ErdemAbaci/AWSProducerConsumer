@@ -33,9 +33,9 @@ var dynamoDb = import_lib_dynamodb.DynamoDBDocumentClient.from(new import_client
   }
 });
 function getTableName() {
-  const tableName = process.env.JOBS_TABLE;
+  const tableName = process.env.JOBS_TABLE_NAME;
   if (!tableName) {
-    throw new Error("JOBS_TABLE environment variable is required");
+    throw new Error("JOBS_TABLE_NAME environment variable is required");
   }
   return tableName;
 }
@@ -56,6 +56,34 @@ var jobRepository = {
       })
     );
     return response.Item;
+  },
+  async claimJobIfPending(id) {
+    try {
+      const response = await dynamoDb.send(
+        new import_lib_dynamodb.UpdateCommand({
+          TableName: getTableName(),
+          Key: { id },
+          UpdateExpression: "SET #status = :processing, updatedAt = :updatedAt, attemptCount = attemptCount + :increment",
+          ConditionExpression: "#status = :pending",
+          ExpressionAttributeNames: {
+            "#status": "status"
+          },
+          ExpressionAttributeValues: {
+            ":pending": "pending",
+            ":processing": "processing",
+            ":updatedAt": (/* @__PURE__ */ new Date()).toISOString(),
+            ":increment": 1
+          },
+          ReturnValues: "ALL_NEW"
+        })
+      );
+      return response.Attributes;
+    } catch (error) {
+      if (error?.name === "ConditionalCheckFailedException") {
+        return void 0;
+      }
+      throw error;
+    }
   }
 };
 
@@ -92,7 +120,7 @@ function json(statusCode, body) {
 }
 function parsePayload(body) {
   if (!body) {
-    return {};
+    return null;
   }
   try {
     const parsed = JSON.parse(body);
@@ -107,13 +135,17 @@ function parsePayload(body) {
 async function handler(event) {
   const payload = parsePayload(event.body);
   if (payload === null) {
-    return json(400, { message: "Request body must be a JSON object" });
+    return json(400, { message: "Request body is required and must be a JSON object" });
+  }
+  if (Object.keys(payload).length === 0) {
+    return json(400, { message: "Payload cannot be an empty object" });
   }
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const job = {
     id: (0, import_node_crypto.randomUUID)(),
     status: "pending",
     payload,
+    attemptCount: 0,
     createdAt: now,
     updatedAt: now
   };
@@ -124,7 +156,7 @@ async function handler(event) {
     console.error("Failed to create job", error);
     return json(500, { message: "Could not create job" });
   }
-  return json(202, job);
+  return json(202, { id: job.id, status: job.status });
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
