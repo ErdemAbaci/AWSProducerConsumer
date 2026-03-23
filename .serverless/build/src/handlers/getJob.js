@@ -108,6 +108,7 @@ async function handler(event) {
     }
     return json(200, {
       id: job.id,
+      type: job.type,
       status: job.status,
       attemptCount: job.attemptCount,
       createdAt: job.createdAt,

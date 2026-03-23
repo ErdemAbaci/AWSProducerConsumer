@@ -46,7 +46,9 @@ export async function handler(event: SqsEvent): Promise<void> {
     try {
       delete job.error;
       delete job.result;
-
+      if (job.type !== "demo") {
+        throw new Error(`Unsupported job type: ${job.type}`);
+      } 
       if (job.payload["shouldFail"] === true) {
         throw new Error("Job was asked to fail");
       }

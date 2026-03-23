@@ -5,6 +5,7 @@ export type JobPayload = Record<string, unknown>;
 export interface Job {
   id: string;
   status: JobStatus;
+  type:string;
   payload: JobPayload;
   result?: JobPayload;
   error?: string;

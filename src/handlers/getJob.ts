@@ -38,6 +38,7 @@ export async function handler(event: ApiEvent): Promise<ApiResponse> {
 
     return json(200, {
   id: job.id,
+  type: job.type,
   status: job.status,
   attemptCount: job.attemptCount,
   createdAt: job.createdAt,

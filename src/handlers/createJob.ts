@@ -23,7 +23,9 @@ function json(statusCode: number, body: unknown): ApiResponse {
   };
 }
 
-function parsePayload(body?: string | null): JobPayload | null {
+function parseRequest(
+  body?: string | null,
+): { type: string; payload: JobPayload } | null {
   if (!body) {
     return null;
   }
@@ -35,26 +37,42 @@ function parsePayload(body?: string | null): JobPayload | null {
       return null;
     }
 
-    return parsed as JobPayload;
+    if (typeof parsed.type !== "string" || parsed.type.trim() === "") {
+      return null;
+    }
+
+    if (
+      !parsed.payload ||
+      typeof parsed.payload !== "object" ||
+      Array.isArray(parsed.payload)
+    ) {
+      return null;
+    }
+
+    return {
+      type: parsed.type.trim(),
+      payload: parsed.payload as JobPayload,
+    };
   } catch {
     return null;
   }
 }
 
 export async function handler(event: ApiEvent): Promise<ApiResponse> {
-  const payload = parsePayload(event.body);
+  const request = parseRequest(event.body);
 
-  if (payload === null) {
+  if (request === null) {
     return json(400, { message: "Request body is required and must be a JSON object" });
   }
-  if(Object.keys(payload).length === 0){
+  if(Object.keys(request.payload).length === 0){
     return json(400, { message: "Payload cannot be an empty object" });
   }
   const now = new Date().toISOString();
   const job: Job = {
     id: randomUUID(),
+    type: request.type,
     status: "pending",
-    payload,
+    payload: request.payload,
     attemptCount: 0,
     createdAt: now,
     updatedAt: now,

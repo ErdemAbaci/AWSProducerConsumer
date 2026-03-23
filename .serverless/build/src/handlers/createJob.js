@@ -118,7 +118,7 @@ function json(statusCode, body) {
     body: JSON.stringify(body)
   };
 }
-function parsePayload(body) {
+function parseRequest(body) {
   if (!body) {
     return null;
   }
@@ -127,24 +127,34 @@ function parsePayload(body) {
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       return null;
     }
-    return parsed;
+    if (typeof parsed.type !== "string" || parsed.type.trim() === "") {
+      return null;
+    }
+    if (!parsed.payload || typeof parsed.payload !== "object" || Array.isArray(parsed.payload)) {
+      return null;
+    }
+    return {
+      type: parsed.type.trim(),
+      payload: parsed.payload
+    };
   } catch {
     return null;
   }
 }
 async function handler(event) {
-  const payload = parsePayload(event.body);
-  if (payload === null) {
+  const request = parseRequest(event.body);
+  if (request === null) {
     return json(400, { message: "Request body is required and must be a JSON object" });
   }
-  if (Object.keys(payload).length === 0) {
+  if (Object.keys(request.payload).length === 0) {
     return json(400, { message: "Payload cannot be an empty object" });
   }
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const job = {
     id: (0, import_node_crypto.randomUUID)(),
+    type: request.type,
     status: "pending",
-    payload,
+    payload: request.payload,
     attemptCount: 0,
     createdAt: now,
     updatedAt: now
