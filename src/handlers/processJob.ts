@@ -1,6 +1,6 @@
 import { jobRepository } from "../repositories/jobRepository";
 import type { Job, JobMessage } from "../types/job";
-
+// Bu dosya SQS mesajlarını işlemek ve ilgili işleri güncellemek için kullanılır.
 type SqsEvent = {
   Records: Array<{
     body: string;
@@ -35,18 +35,16 @@ export async function handler(event: SqsEvent): Promise<void> {
       continue;
     }
 
-    const job = await jobRepository.getById(message.jobId);
+    const job = await jobRepository.claimJobIfPending(message.jobId);
 
-    if (!job) {
-      console.error(`Job ${message.jobId} was not found`);
-      continue;
-    }
+if (!job) {
+  console.log(`Job ${message.jobId} is missing or already claimed/processed`);
+  continue;
+}
 
-    try {
-      setJobState(job, "processing");
-      delete job.error;
-      delete job.result;
-      await jobRepository.save(job);
+try {
+  delete job.error;
+  delete job.result;
 
       if (job.payload["shouldFail"] === true) {
         throw new Error("Job was asked to fail");

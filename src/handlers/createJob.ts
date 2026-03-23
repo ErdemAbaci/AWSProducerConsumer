@@ -1,9 +1,8 @@
 import { randomUUID } from "node:crypto";
-
 import { jobRepository } from "../repositories/jobRepository";
 import { queueService } from "../services/queueService";
 import type { Job, JobPayload } from "../types/job";
-
+// Bu dosya yeni bir iş oluşturmak ve kuyruğa göndermek için kullanılır.
 type ApiEvent = {
   body?: string | null;
 };
@@ -26,7 +25,7 @@ function json(statusCode: number, body: unknown): ApiResponse {
 
 function parsePayload(body?: string | null): JobPayload | null {
   if (!body) {
-    return {};
+    return null;
   }
 
   try {
@@ -46,9 +45,11 @@ export async function handler(event: ApiEvent): Promise<ApiResponse> {
   const payload = parsePayload(event.body);
 
   if (payload === null) {
-    return json(400, { message: "Request body must be a JSON object" });
+    return json(400, { message: "Request body is required and must be a JSON object" });
   }
-
+  if(Object.keys(payload).length === 0){
+    return json(400, { message: "Payload cannot be an empty object" });
+  }
   const now = new Date().toISOString();
   const job: Job = {
     id: randomUUID(),
@@ -67,5 +68,5 @@ export async function handler(event: ApiEvent): Promise<ApiResponse> {
     return json(500, { message: "Could not create job" });
   }
 
-  return json(202, job);
+  return json(202, {id:job.id, status:job.status,});
 }

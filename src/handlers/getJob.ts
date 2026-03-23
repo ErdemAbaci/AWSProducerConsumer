@@ -1,5 +1,5 @@
 import { jobRepository } from "../repositories/jobRepository";
-
+// Bu dosya belirli bir işi almak için kullanılır. 
 type ApiEvent = {
   pathParameters?: {
     id?: string;
@@ -36,7 +36,14 @@ export async function handler(event: ApiEvent): Promise<ApiResponse> {
       return json(404, { message: "Job not found" });
     }
 
-    return json(200, job);
+    return json(200, {
+  id: job.id,
+  status: job.status,
+  createdAt: job.createdAt,
+  updatedAt: job.updatedAt,
+  result: job.result,
+  error: job.error,
+});
   } catch (error) {
     console.error("Failed to load job", error);
 

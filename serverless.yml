@@ -3,6 +3,7 @@ service: job-system
 custom:
   jobsTableName: ${self:service}-${sls:stage}-jobs
   jobsQueueName: ${self:service}-${sls:stage}-jobs-queue
+  jobsDlqName: ${self:service}-${sls:stage}-jobs-dlq
 
 provider:
   name: aws
@@ -72,3 +73,11 @@ resources:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: ${self:custom.jobsQueueName}
+        RedrivePolicy:
+          deadLetterTargetArn: !GetAtt JobsDlq.Arn
+          maxReceiveCount: 3
+
+    JobsDlq:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.jobsDlqName}    
