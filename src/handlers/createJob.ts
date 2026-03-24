@@ -67,6 +67,22 @@ export async function handler(event: ApiEvent): Promise<ApiResponse> {
   if(Object.keys(request.payload).length === 0){
     return json(400, { message: "Payload cannot be an empty object" });
   }
+  if (request.type === "email") {
+  const { to, subject, body } = request.payload;
+
+  if (
+    typeof to !== "string" ||
+    to.trim() === "" ||
+    typeof subject !== "string" ||
+    subject.trim() === "" ||
+    typeof body !== "string" ||
+    body.trim() === ""
+  ) {
+    return json(400, {
+      message: "Email jobs require non-empty to, subject, and body fields",
+    });
+  }
+}
   const now = new Date().toISOString();
   const job: Job = {
     id: randomUUID(),
