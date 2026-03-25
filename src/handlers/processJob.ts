@@ -1,5 +1,5 @@
 import { jobRepository } from "../repositories/jobRepository";
-import { randomUUID } from "node:crypto";
+import { processorRegistry } from "../services/jobProcessors/processorRegistry";
 import type { JobMessage } from "../types/job";
 
 type SqsEvent = {
@@ -22,41 +22,6 @@ function parseMessage(body: string): JobMessage | null {
   }
 }
 
-function processDemoJob(job: { payload: Record<string, unknown> }) {
-  if (job.payload["shouldFail"] === true) {
-    throw new Error("Job was asked to fail");
-  }
-
-  return {
-    message: "Job processed successfully",
-    processedAt: new Date().toISOString(),
-    executionId: randomUUID(),
-  };
-}
-
-function processEmailJob(job: { payload: Record<string, unknown> }) {
-  const { to, subject, body } = job.payload;
-
-  if (
-    typeof to !== "string" ||
-    to.trim() === "" ||
-    typeof subject !== "string" ||
-    subject.trim() === "" ||
-    typeof body !== "string" ||
-    body.trim() === ""
-  ) {
-    throw new Error("Invalid email payload");
-  }
-
-  return {
-    message: "Email job processed successfully",
-    processedAt: new Date().toISOString(),
-    executionId: randomUUID(),
-    recipient: to,
-    subject,
-  };
-}
-
 export async function handler(event: SqsEvent): Promise<void> {
   for (const record of event.Records) {
     const message = parseMessage(record.body);
@@ -74,19 +39,17 @@ export async function handler(event: SqsEvent): Promise<void> {
     }
 
     try {
-      let result;
+      const processor = processorRegistry[job.type];
 
-      if (job.type === "demo") {
-        result = processDemoJob(job);
-      } else if (job.type === "email") {
-        result = processEmailJob(job);
-      } else {
-        throw new Error(`Unsupported job type: ${job.type}`);
-      }
+    if (!processor) {
+    throw new Error(`Unsupported job type: ${job.type}`);
+    }
 
-      await jobRepository.markAsCompleted(job.id, result);
+    const result = processor(job);
+
+    await jobRepository.markAsCompleted(job.id, result);
     } catch (error) {
-        await jobRepository.markAsFailed(
+      await jobRepository.markAsFailed(
         job.id,
         error instanceof Error ? error.message : "Unknown error",
       );

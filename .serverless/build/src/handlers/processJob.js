@@ -83,11 +83,89 @@ var jobRepository = {
       }
       throw error;
     }
+  },
+  async markAsCompleted(id, result) {
+    const updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    const response = await dynamoDb.send(
+      new import_lib_dynamodb.UpdateCommand({
+        TableName: getTableName(),
+        Key: { id },
+        UpdateExpression: "SET #status = :completed, updatedAt = :updatedAt, #result = :result REMOVE #error",
+        ExpressionAttributeNames: {
+          "#status": "status",
+          "#result": "result",
+          "#error": "error"
+        },
+        ExpressionAttributeValues: {
+          ":completed": "completed",
+          ":updatedAt": updatedAt,
+          ":result": result
+        },
+        ReturnValues: "ALL_NEW"
+      })
+    );
+    return response.Attributes;
+  },
+  async markAsFailed(id, errorMessage) {
+    const updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    const response = await dynamoDb.send(
+      new import_lib_dynamodb.UpdateCommand({
+        TableName: getTableName(),
+        Key: { id },
+        UpdateExpression: "SET #status = :failed, updatedAt = :updatedAt, #error = :error REMOVE #result",
+        ExpressionAttributeNames: {
+          "#status": "status",
+          "#error": "error",
+          "#result": "result"
+        },
+        ExpressionAttributeValues: {
+          ":failed": "failed",
+          ":updatedAt": updatedAt,
+          ":error": errorMessage
+        },
+        ReturnValues: "ALL_NEW"
+      })
+    );
+    return response.Attributes;
   }
 };
 
-// src/handlers/processJob.ts
+// src/services/jobProcessors/demoProcessor.ts
 var import_node_crypto = require("node:crypto");
+function processDemoJob(job) {
+  if (job.payload["shouldFail"] === true) {
+    throw new Error("Job was asked to fail");
+  }
+  return {
+    message: "Job processed successfully",
+    processedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    executionId: (0, import_node_crypto.randomUUID)()
+  };
+}
+
+// src/services/jobProcessors/emailProcessor.ts
+var import_node_crypto2 = require("node:crypto");
+function processEmailJob(job) {
+  const { to, subject, body } = job.payload;
+  if (typeof to !== "string" || to.trim() === "" || typeof subject !== "string" || subject.trim() === "" || typeof body !== "string" || body.trim() === "") {
+    throw new Error("Invalid email payload");
+  }
+  return {
+    message: "Email job processed successfully",
+    processedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    executionId: (0, import_node_crypto2.randomUUID)(),
+    recipient: to,
+    subject
+  };
+}
+
+// src/services/jobProcessors/processorRegistry.ts
+var processorRegistry = {
+  demo: processDemoJob,
+  email: processEmailJob
+};
+
+// src/handlers/processJob.ts
 function parseMessage(body) {
   try {
     const parsed = JSON.parse(body);
@@ -98,10 +176,6 @@ function parseMessage(body) {
   } catch {
     return null;
   }
-}
-function setJobState(job, status) {
-  job.status = status;
-  job.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
 }
 async function handler(event) {
   for (const record of event.Records) {
@@ -116,26 +190,17 @@ async function handler(event) {
       continue;
     }
     try {
-      delete job.error;
-      delete job.result;
-      if (job.type !== "demo") {
+      const processor = processorRegistry[job.type];
+      if (!processor) {
         throw new Error(`Unsupported job type: ${job.type}`);
       }
-      if (job.payload["shouldFail"] === true) {
-        throw new Error("Job was asked to fail");
-      }
-      setJobState(job, "completed");
-      job.result = {
-        message: "Job processed successfully",
-        processedAt: job.updatedAt,
-        executionId: (0, import_node_crypto.randomUUID)()
-      };
-      await jobRepository.save(job);
+      const result = processor(job);
+      await jobRepository.markAsCompleted(job.id, result);
     } catch (error) {
-      setJobState(job, "failed");
-      job.error = error instanceof Error ? error.message : "Unknown error";
-      delete job.result;
-      await jobRepository.save(job);
+      await jobRepository.markAsFailed(
+        job.id,
+        error instanceof Error ? error.message : "Unknown error"
+      );
       throw error;
     }
   }

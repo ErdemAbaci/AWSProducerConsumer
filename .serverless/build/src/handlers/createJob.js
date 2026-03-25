@@ -84,6 +84,50 @@ var jobRepository = {
       }
       throw error;
     }
+  },
+  async markAsCompleted(id, result) {
+    const updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    const response = await dynamoDb.send(
+      new import_lib_dynamodb.UpdateCommand({
+        TableName: getTableName(),
+        Key: { id },
+        UpdateExpression: "SET #status = :completed, updatedAt = :updatedAt, #result = :result REMOVE #error",
+        ExpressionAttributeNames: {
+          "#status": "status",
+          "#result": "result",
+          "#error": "error"
+        },
+        ExpressionAttributeValues: {
+          ":completed": "completed",
+          ":updatedAt": updatedAt,
+          ":result": result
+        },
+        ReturnValues: "ALL_NEW"
+      })
+    );
+    return response.Attributes;
+  },
+  async markAsFailed(id, errorMessage) {
+    const updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    const response = await dynamoDb.send(
+      new import_lib_dynamodb.UpdateCommand({
+        TableName: getTableName(),
+        Key: { id },
+        UpdateExpression: "SET #status = :failed, updatedAt = :updatedAt, #error = :error REMOVE #result",
+        ExpressionAttributeNames: {
+          "#status": "status",
+          "#error": "error",
+          "#result": "result"
+        },
+        ExpressionAttributeValues: {
+          ":failed": "failed",
+          ":updatedAt": updatedAt,
+          ":error": errorMessage
+        },
+        ReturnValues: "ALL_NEW"
+      })
+    );
+    return response.Attributes;
   }
 };
 
@@ -148,6 +192,14 @@ async function handler(event) {
   }
   if (Object.keys(request.payload).length === 0) {
     return json(400, { message: "Payload cannot be an empty object" });
+  }
+  if (request.type === "email") {
+    const { to, subject, body } = request.payload;
+    if (typeof to !== "string" || to.trim() === "" || typeof subject !== "string" || subject.trim() === "" || typeof body !== "string" || body.trim() === "") {
+      return json(400, {
+        message: "Email jobs require non-empty to, subject, and body fields"
+      });
+    }
   }
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const job = {
