@@ -99,6 +99,22 @@ describe("createJob handler", () => {
       jobId: savedJob.id,
     });
   });
+  
+  it("should return 400 when job type is unsupported", async () => {
+  const response = await handler({
+    body: JSON.stringify({
+      type: "sms",
+      payload: {
+        phone: "+905551112233",
+      },
+    }),
+  });
+
+  expect(response.statusCode).toBe(400);
+  expect(parseBody(response)).toEqual({
+    message: "Unsupported job type: sms",
+  });
+});
 
   it("should return 400 when payload is an empty object", async () => {
   const response = await handler({
