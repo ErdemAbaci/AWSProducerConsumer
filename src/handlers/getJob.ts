@@ -1,4 +1,5 @@
 import { jobRepository } from "../repositories/jobRepository";
+import { toJobResponse } from "../mappers/jobResponseMapper";
 // Bu dosya belirli bir işi almak için kullanılır. 
 type ApiEvent = {
   pathParameters?: {
@@ -36,16 +37,8 @@ export async function handler(event: ApiEvent): Promise<ApiResponse> {
       return json(404, { message: "Job not found" });
     }
 
-    return json(200, {
-  id: job.id,
-  type: job.type,
-  status: job.status,
-  attemptCount: job.attemptCount,
-  createdAt: job.createdAt,
-  updatedAt: job.updatedAt,
-  result: job.result,
-  error: job.error,
-});
+    return json(200, toJobResponse(job));
+    
   } catch (error) {
     console.error("Failed to load job", error);
 

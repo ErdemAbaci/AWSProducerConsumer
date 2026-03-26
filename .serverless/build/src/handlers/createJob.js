@@ -152,6 +152,77 @@ var queueService = {
   }
 };
 
+// src/services/jobValidation/createJobRequestValidator.ts
+var supportedJobTypes = ["demo", "email"];
+function validateCreateJobRequest(body) {
+  if (!body) {
+    return {
+      ok: false,
+      message: "Request body is required and must be a JSON object"
+    };
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return {
+      ok: false,
+      message: "Request body is required and must be a JSON object"
+    };
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return {
+      ok: false,
+      message: "Request body is required and must be a JSON object"
+    };
+  }
+  const request = parsed;
+  if (typeof request.type !== "string" || request.type.trim() === "") {
+    return {
+      ok: false,
+      message: "Request body must include a non-empty type and a payload object"
+    };
+  }
+  if (!request.payload || typeof request.payload !== "object" || Array.isArray(request.payload)) {
+    return {
+      ok: false,
+      message: "Request body must include a non-empty type and a payload object"
+    };
+  }
+  const normalizedType = request.type.trim();
+  const payload = request.payload;
+  if (!supportedJobTypes.includes(
+    normalizedType
+  )) {
+    return {
+      ok: false,
+      message: `Unsupported job type: ${normalizedType}`
+    };
+  }
+  if (Object.keys(payload).length === 0) {
+    return {
+      ok: false,
+      message: "Payload cannot be an empty object"
+    };
+  }
+  if (normalizedType === "email") {
+    const { to, subject, body: body2 } = payload;
+    if (typeof to !== "string" || to.trim() === "" || typeof subject !== "string" || subject.trim() === "" || typeof body2 !== "string" || body2.trim() === "") {
+      return {
+        ok: false,
+        message: "Email jobs require non-empty to, subject, and body fields"
+      };
+    }
+  }
+  return {
+    ok: true,
+    data: {
+      type: normalizedType,
+      payload
+    }
+  };
+}
+
 // src/handlers/createJob.ts
 function json(statusCode, body) {
   return {
@@ -162,45 +233,12 @@ function json(statusCode, body) {
     body: JSON.stringify(body)
   };
 }
-function parseRequest(body) {
-  if (!body) {
-    return null;
-  }
-  try {
-    const parsed = JSON.parse(body);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return null;
-    }
-    if (typeof parsed.type !== "string" || parsed.type.trim() === "") {
-      return null;
-    }
-    if (!parsed.payload || typeof parsed.payload !== "object" || Array.isArray(parsed.payload)) {
-      return null;
-    }
-    return {
-      type: parsed.type.trim(),
-      payload: parsed.payload
-    };
-  } catch {
-    return null;
-  }
-}
 async function handler(event) {
-  const request = parseRequest(event.body);
-  if (request === null) {
-    return json(400, { message: "Request body is required and must be a JSON object" });
+  const validation = validateCreateJobRequest(event.body);
+  if (!validation.ok) {
+    return json(400, { message: validation.message });
   }
-  if (Object.keys(request.payload).length === 0) {
-    return json(400, { message: "Payload cannot be an empty object" });
-  }
-  if (request.type === "email") {
-    const { to, subject, body } = request.payload;
-    if (typeof to !== "string" || to.trim() === "" || typeof subject !== "string" || subject.trim() === "" || typeof body !== "string" || body.trim() === "") {
-      return json(400, {
-        message: "Email jobs require non-empty to, subject, and body fields"
-      });
-    }
-  }
+  const request = validation.data;
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const job = {
     id: (0, import_node_crypto.randomUUID)(),
@@ -218,7 +256,10 @@ async function handler(event) {
     console.error("Failed to create job", error);
     return json(500, { message: "Could not create job" });
   }
-  return json(202, { id: job.id, status: job.status });
+  return json(202, {
+    id: job.id,
+    status: job.status
+  });
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
