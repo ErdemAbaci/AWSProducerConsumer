@@ -62,16 +62,23 @@ var jobRepository = {
         new import_lib_dynamodb.UpdateCommand({
           TableName: getTableName(),
           Key: { id },
-          UpdateExpression: "SET #status = :processing, updatedAt = :updatedAt, attemptCount = attemptCount + :increment",
+          UpdateExpression: "SET #status = :processing, updatedAt = :updatedAt, attemptCount = attemptCount + :increment, #history = list_append(#history, :historyEvent)",
           ConditionExpression: "#status = :pending",
           ExpressionAttributeNames: {
-            "#status": "status"
+            "#status": "status",
+            "#history": "history"
           },
           ExpressionAttributeValues: {
             ":pending": "pending",
             ":processing": "processing",
             ":updatedAt": (/* @__PURE__ */ new Date()).toISOString(),
-            ":increment": 1
+            ":increment": 1,
+            ":historyEvent": [
+              {
+                status: "processing",
+                timestamp: (/* @__PURE__ */ new Date()).toISOString()
+              }
+            ]
           },
           ReturnValues: "ALL_NEW"
         })
@@ -90,16 +97,24 @@ var jobRepository = {
       new import_lib_dynamodb.UpdateCommand({
         TableName: getTableName(),
         Key: { id },
-        UpdateExpression: "SET #status = :completed, updatedAt = :updatedAt, #result = :result REMOVE #error",
+        UpdateExpression: "SET #status = :completed, updatedAt = :updatedAt, #result = :result, #history = list_append(#history, :historyEvent) REMOVE #error",
         ExpressionAttributeNames: {
           "#status": "status",
           "#result": "result",
-          "#error": "error"
+          "#error": "error",
+          "#history": "history"
         },
         ExpressionAttributeValues: {
           ":completed": "completed",
           ":updatedAt": updatedAt,
-          ":result": result
+          ":result": result,
+          ":historyEvent": [
+            {
+              status: "completed",
+              timestamp: updatedAt,
+              message: typeof result?.message === "string" ? result.message : "Job completed"
+            }
+          ]
         },
         ReturnValues: "ALL_NEW"
       })
@@ -112,16 +127,24 @@ var jobRepository = {
       new import_lib_dynamodb.UpdateCommand({
         TableName: getTableName(),
         Key: { id },
-        UpdateExpression: "SET #status = :failed, updatedAt = :updatedAt, #error = :error REMOVE #result",
+        UpdateExpression: "SET #status = :failed, updatedAt = :updatedAt, #error = :error, #history = list_append(#history, :historyEvent) REMOVE #result",
         ExpressionAttributeNames: {
           "#status": "status",
           "#error": "error",
-          "#result": "result"
+          "#result": "result",
+          "#history": "history"
         },
         ExpressionAttributeValues: {
           ":failed": "failed",
           ":updatedAt": updatedAt,
-          ":error": errorMessage
+          ":error": errorMessage,
+          ":historyEvent": [
+            {
+              status: "failed",
+              timestamp: updatedAt,
+              message: errorMessage
+            }
+          ]
         },
         ReturnValues: "ALL_NEW"
       })
@@ -129,6 +152,21 @@ var jobRepository = {
     return response.Attributes;
   }
 };
+
+// src/mappers/jobResponseMapper.ts
+function toJobResponse(job) {
+  return {
+    id: job.id,
+    type: job.type,
+    status: job.status,
+    attemptCount: job.attemptCount,
+    createdAt: job.createdAt,
+    updatedAt: job.updatedAt,
+    history: job.history,
+    result: job.result,
+    error: job.error
+  };
+}
 
 // src/handlers/getJob.ts
 function json(statusCode, body) {
@@ -150,16 +188,7 @@ async function handler(event) {
     if (!job) {
       return json(404, { message: "Job not found" });
     }
-    return json(200, {
-      id: job.id,
-      type: job.type,
-      status: job.status,
-      attemptCount: job.attemptCount,
-      createdAt: job.createdAt,
-      updatedAt: job.updatedAt,
-      result: job.result,
-      error: job.error
-    });
+    return json(200, toJobResponse(job));
   } catch (error) {
     console.error("Failed to load job", error);
     return json(500, { message: "Could not load job" });

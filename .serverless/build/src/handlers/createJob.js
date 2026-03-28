@@ -63,16 +63,23 @@ var jobRepository = {
         new import_lib_dynamodb.UpdateCommand({
           TableName: getTableName(),
           Key: { id },
-          UpdateExpression: "SET #status = :processing, updatedAt = :updatedAt, attemptCount = attemptCount + :increment",
+          UpdateExpression: "SET #status = :processing, updatedAt = :updatedAt, attemptCount = attemptCount + :increment, #history = list_append(#history, :historyEvent)",
           ConditionExpression: "#status = :pending",
           ExpressionAttributeNames: {
-            "#status": "status"
+            "#status": "status",
+            "#history": "history"
           },
           ExpressionAttributeValues: {
             ":pending": "pending",
             ":processing": "processing",
             ":updatedAt": (/* @__PURE__ */ new Date()).toISOString(),
-            ":increment": 1
+            ":increment": 1,
+            ":historyEvent": [
+              {
+                status: "processing",
+                timestamp: (/* @__PURE__ */ new Date()).toISOString()
+              }
+            ]
           },
           ReturnValues: "ALL_NEW"
         })
@@ -91,16 +98,24 @@ var jobRepository = {
       new import_lib_dynamodb.UpdateCommand({
         TableName: getTableName(),
         Key: { id },
-        UpdateExpression: "SET #status = :completed, updatedAt = :updatedAt, #result = :result REMOVE #error",
+        UpdateExpression: "SET #status = :completed, updatedAt = :updatedAt, #result = :result, #history = list_append(#history, :historyEvent) REMOVE #error",
         ExpressionAttributeNames: {
           "#status": "status",
           "#result": "result",
-          "#error": "error"
+          "#error": "error",
+          "#history": "history"
         },
         ExpressionAttributeValues: {
           ":completed": "completed",
           ":updatedAt": updatedAt,
-          ":result": result
+          ":result": result,
+          ":historyEvent": [
+            {
+              status: "completed",
+              timestamp: updatedAt,
+              message: typeof result?.message === "string" ? result.message : "Job completed"
+            }
+          ]
         },
         ReturnValues: "ALL_NEW"
       })
@@ -113,16 +128,24 @@ var jobRepository = {
       new import_lib_dynamodb.UpdateCommand({
         TableName: getTableName(),
         Key: { id },
-        UpdateExpression: "SET #status = :failed, updatedAt = :updatedAt, #error = :error REMOVE #result",
+        UpdateExpression: "SET #status = :failed, updatedAt = :updatedAt, #error = :error, #history = list_append(#history, :historyEvent) REMOVE #result",
         ExpressionAttributeNames: {
           "#status": "status",
           "#error": "error",
-          "#result": "result"
+          "#result": "result",
+          "#history": "history"
         },
         ExpressionAttributeValues: {
           ":failed": "failed",
           ":updatedAt": updatedAt,
-          ":error": errorMessage
+          ":error": errorMessage,
+          ":historyEvent": [
+            {
+              status: "failed",
+              timestamp: updatedAt,
+              message: errorMessage
+            }
+          ]
         },
         ReturnValues: "ALL_NEW"
       })
@@ -244,10 +267,16 @@ async function handler(event) {
     id: (0, import_node_crypto.randomUUID)(),
     type: request.type,
     status: "pending",
-    payload: request.payload,
     attemptCount: 0,
+    payload: request.payload,
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
+    history: [
+      {
+        status: "pending",
+        timestamp: now
+      }
+    ]
   };
   try {
     await jobRepository.save(job);

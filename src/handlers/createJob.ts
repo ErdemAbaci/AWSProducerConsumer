@@ -35,14 +35,21 @@ export async function handler(event: ApiEvent): Promise<ApiResponse> {
 
   const now = new Date().toISOString();
   const job: Job = {
-    id: randomUUID(),
-    type: request.type,
-    status: "pending",
-    payload: request.payload,
-    attemptCount: 0,
-    createdAt: now,
-    updatedAt: now,
-  };
+  id: randomUUID(),
+  type: request.type,
+  status: "pending",
+  attemptCount: 0,
+  payload: request.payload,
+  createdAt: now,
+  updatedAt: now,
+  history: [
+    {
+      eventType: "status_change",
+      status: "pending",
+      timestamp: now,
+    },
+  ],
+};
 
   try {
     await jobRepository.save(job);

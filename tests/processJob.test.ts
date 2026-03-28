@@ -21,6 +21,13 @@ function buildJob(overrides: Partial<Job> = {}): Job {
     attemptCount: 0,
     createdAt: "2026-03-24T10:00:00.000Z",
     updatedAt: "2026-03-24T10:00:00.000Z",
+    history: [
+      {
+        eventType: "status_change",
+        status: "pending",
+        timestamp: "2026-03-24T10:00:00.000Z",
+      },
+    ],
     ...overrides,
   };
 }
@@ -105,6 +112,7 @@ describe("processJob handler", () => {
     expect(markAsCompletedMock).toHaveBeenCalledTimes(1);
     expect(markAsCompletedMock).toHaveBeenCalledWith(
       "job-123",
+      "demo",
       expect.objectContaining({
         message: "Job processed successfully",
         processedAt: expect.any(String),
@@ -138,7 +146,11 @@ describe("processJob handler", () => {
     ).rejects.toThrow("Job was asked to fail");
 
     expect(markAsFailedMock).toHaveBeenCalledTimes(1);
-    expect(markAsFailedMock).toHaveBeenCalledWith("job-456", "Job was asked to fail");
+    expect(markAsFailedMock).toHaveBeenCalledWith(
+      "job-456",
+      "demo",
+      "Job was asked to fail",
+    );
     expect(markAsCompletedMock).not.toHaveBeenCalled();
   });
 
@@ -170,6 +182,7 @@ describe("processJob handler", () => {
     expect(markAsCompletedMock).toHaveBeenCalledTimes(1);
     expect(markAsCompletedMock).toHaveBeenCalledWith(
       "job-789",
+      "email",
       expect.objectContaining({
         message: "Email job processed successfully",
         processedAt: expect.any(String),
@@ -207,7 +220,11 @@ describe("processJob handler", () => {
     ).rejects.toThrow("Invalid email payload");
 
     expect(markAsFailedMock).toHaveBeenCalledTimes(1);
-    expect(markAsFailedMock).toHaveBeenCalledWith("job-790", "Invalid email payload");
+    expect(markAsFailedMock).toHaveBeenCalledWith(
+      "job-790",
+      "email",
+      "Invalid email payload",
+    );
     expect(markAsCompletedMock).not.toHaveBeenCalled();
   });
 
@@ -238,58 +255,60 @@ describe("processJob handler", () => {
     expect(markAsFailedMock).toHaveBeenCalledTimes(1);
     expect(markAsFailedMock).toHaveBeenCalledWith(
       "job-791",
+      "sms",
       "Unsupported job type: sms",
     );
     expect(markAsCompletedMock).not.toHaveBeenCalled();
   });
 
   it("should process multiple SQS records independently", async () => {
-      claimJobIfPendingMock
-        .mockResolvedValueOnce(
-          buildJob({
-            id: "job-111",
-            type: "demo",
-            payload: {
-              task: "first-job",
-            },
-          }),
-        )
-        .mockResolvedValueOnce(undefined);
-
-      await expect(
-        handler({
-          Records: [
-            {
-              body: JSON.stringify({
-                jobId: "job-111",
-              }),
-            },
-            {
-              body: "not-json",
-            },
-            {
-              body: JSON.stringify({
-                jobId: "job-222",
-              }),
-            },
-          ],
+    claimJobIfPendingMock
+      .mockResolvedValueOnce(
+        buildJob({
+          id: "job-111",
+          type: "demo",
+          payload: {
+            task: "first-job",
+          },
         }),
-      ).resolves.toBeUndefined();
+      )
+      .mockResolvedValueOnce(undefined);
 
-      expect(claimJobIfPendingMock).toHaveBeenCalledTimes(2);
-      expect(claimJobIfPendingMock).toHaveBeenNthCalledWith(1, "job-111");
-      expect(claimJobIfPendingMock).toHaveBeenNthCalledWith(2, "job-222");
+    await expect(
+      handler({
+        Records: [
+          {
+            body: JSON.stringify({
+              jobId: "job-111",
+            }),
+          },
+          {
+            body: "not-json",
+          },
+          {
+            body: JSON.stringify({
+              jobId: "job-222",
+            }),
+          },
+        ],
+      }),
+    ).resolves.toBeUndefined();
 
-      expect(markAsCompletedMock).toHaveBeenCalledTimes(1);
-      expect(markAsCompletedMock).toHaveBeenCalledWith(
-        "job-111",
-        expect.objectContaining({
-          message: "Job processed successfully",
-          processedAt: expect.any(String),
-          executionId: expect.any(String),
-        }),
-      );
+    expect(claimJobIfPendingMock).toHaveBeenCalledTimes(2);
+    expect(claimJobIfPendingMock).toHaveBeenNthCalledWith(1, "job-111");
+    expect(claimJobIfPendingMock).toHaveBeenNthCalledWith(2, "job-222");
 
-      expect(markAsFailedMock).not.toHaveBeenCalled();
+    expect(markAsCompletedMock).toHaveBeenCalledTimes(1);
+    expect(markAsCompletedMock).toHaveBeenCalledWith(
+      "job-111",
+      "demo",
+      expect.objectContaining({
+        message: "Job processed successfully",
+        processedAt: expect.any(String),
+        executionId: expect.any(String),
+      }),
+    );
+
+    expect(markAsFailedMock).not.toHaveBeenCalled();
   });
 });

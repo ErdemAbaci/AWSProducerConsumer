@@ -46,16 +46,27 @@ export const jobRepository = {
         new UpdateCommand({
           TableName: getTableName(),
           Key: { id },
-          UpdateExpression: "SET #status = :processing, updatedAt = :updatedAt, attemptCount = attemptCount + :increment",
+          UpdateExpression:"SET #status = :processing, updatedAt = :updatedAt, attemptCount = attemptCount + :increment, #history = list_append(#history, :historyEvent)",
           ConditionExpression: "#status = :pending",
           ExpressionAttributeNames: {
             "#status": "status",
+            "#history": "history",
           },
           ExpressionAttributeValues: {
             ":pending": "pending",
             ":processing": "processing",
             ":updatedAt": new Date().toISOString(),
             ":increment": 1,
+            ":historyEvent":[
+              {
+                eventType: "status_change",
+                status: "processing",
+                timestamp: new Date().toISOString(),
+                metadata:{
+                  attemptIncrementBy: 1,
+                }
+              },
+            ],
           },
           ReturnValues: "ALL_NEW",
         }),
@@ -73,6 +84,7 @@ export const jobRepository = {
 
     async markAsCompleted(
     id: string,
+    jobType:string,
     result: Job["result"],
   ): Promise<Job | undefined> {
     const updatedAt = new Date().toISOString();
@@ -82,16 +94,31 @@ export const jobRepository = {
         TableName: getTableName(),
         Key: { id },
         UpdateExpression:
-          "SET #status = :completed, updatedAt = :updatedAt, #result = :result REMOVE #error",
+  "SET #status = :completed, updatedAt = :updatedAt, #result = :result, #history = list_append(#history, :historyEvent) REMOVE #error",
         ExpressionAttributeNames: {
           "#status": "status",
           "#result": "result",
           "#error": "error",
+          "#history": "history",
         },
         ExpressionAttributeValues: {
           ":completed": "completed",
           ":updatedAt": updatedAt,
           ":result": result,
+          ":historyEvent": [
+        {
+           eventType: "status_change",
+           status: "completed",
+           timestamp: updatedAt,
+          message:
+          typeof result?.message === "string"
+          ? result.message
+          : "Job completed",
+          metadata: {
+            jobType,
+    },
+        },
+        ],
         },
         ReturnValues: "ALL_NEW",
       }),
@@ -100,7 +127,7 @@ export const jobRepository = {
     return response.Attributes as Job | undefined;
   },
 
-  async markAsFailed(id: string, errorMessage: string): Promise<Job | undefined> {
+  async markAsFailed(id: string, jobType: string, errorMessage: string): Promise<Job | undefined> {
     const updatedAt = new Date().toISOString();
 
     const response = await dynamoDb.send(
@@ -108,17 +135,29 @@ export const jobRepository = {
         TableName: getTableName(),
         Key: { id },
         UpdateExpression:
-          "SET #status = :failed, updatedAt = :updatedAt, #error = :error REMOVE #result",
+  "SET #status = :failed, updatedAt = :updatedAt, #error = :error, #history = list_append(#history, :historyEvent) REMOVE #result",
         ExpressionAttributeNames: {
           "#status": "status",
           "#error": "error",
           "#result": "result",
+          "#history": "history",
         },
         ExpressionAttributeValues: {
-          ":failed": "failed",
-          ":updatedAt": updatedAt,
-          ":error": errorMessage,
-        },
+  ":failed": "failed",
+  ":updatedAt": updatedAt,
+  ":error": errorMessage,
+  ":historyEvent": [
+    {
+      eventType:"status_change",
+      status: "failed",
+      timestamp: updatedAt,
+      message: errorMessage,
+      metadata:{
+        jobType,
+      }
+    },
+  ],
+},
         ReturnValues: "ALL_NEW",
       }),
     );

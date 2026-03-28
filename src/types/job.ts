@@ -11,9 +11,18 @@ export interface Job {
   error?: string;
   createdAt: string;
   updatedAt: string;
+  history: JobHistoryItem[];
   attemptCount: number;
 }
 
 export interface JobMessage {
   jobId: string;
+}
+
+export type JobHistoryItem = {
+  eventType: "status_change";
+  status: string;
+  timestamp: string;
+  message?: string;
+  metadata?: Record<string, unknown>;
 }

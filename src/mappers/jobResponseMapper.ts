@@ -1,4 +1,4 @@
-import type {Job} from '../types/Job';
+import type { Job } from '../types/job';
 
 export function toJobResponse(job: Job) {
     return {
@@ -8,6 +8,7 @@ export function toJobResponse(job: Job) {
         attemptCount:job.attemptCount,
         createdAt:job.createdAt,
         updatedAt:job.updatedAt,
+        history:job.history,
         result:job.result,
         error:job.error,
     };

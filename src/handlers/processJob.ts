@@ -47,10 +47,11 @@ export async function handler(event: SqsEvent): Promise<void> {
 
     const result = processor(job);
 
-    await jobRepository.markAsCompleted(job.id, result);
+    await jobRepository.markAsCompleted(job.id, job.type, result);
     } catch (error) {
       await jobRepository.markAsFailed(
         job.id,
+        job.type,
         error instanceof Error ? error.message : "Unknown error",
       );
       throw error;
