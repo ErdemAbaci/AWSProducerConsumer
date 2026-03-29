@@ -13,6 +13,7 @@ type ApiEvent = {
         type?: string;
         limit?: string;
         cursor?: string;
+        sortOrder?: string;
     } | null;
 }
 
@@ -30,8 +31,10 @@ export async function handler(event: ApiEvent): Promise<ApiResponse> {
   try {
     const rawLimit = event.queryStringParameters?.limit;
     const rawCursor = event.queryStringParameters?.cursor;
+    const rawSortOrder = event.queryStringParameters?.sortOrder;
     let parsedLimit: number | undefined;
     let parsedCursor: Record<string, unknown> | undefined;
+    let parsedSortOrder: "asc" | "desc" | undefined;
     if (rawLimit !== undefined) {
      const numericLimit = Number(rawLimit);
 
@@ -56,12 +59,21 @@ export async function handler(event: ApiEvent): Promise<ApiResponse> {
         });
       }
     
+    }
+    if (rawSortOrder !== undefined) {
+      if (rawSortOrder !== "asc" && rawSortOrder !== "desc") {
+       return json(400, {
+         message: "sortOrder must be either 'asc' or 'desc'",
+       });
+     }
+
+     parsedSortOrder = rawSortOrder;
     } 
     const filters = {
         status: event.queryStringParameters?.status,
         type: event.queryStringParameters?.type,
     };
-    const result = await jobRepository.listJobs(filters, parsedLimit, parsedCursor);
+    const result = await jobRepository.listJobs(filters, parsedLimit, parsedCursor, parsedSortOrder);
     
     return json(200, {
      items: result.items.map((job) => toJobResponse(job)),

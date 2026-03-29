@@ -43,6 +43,7 @@ export const jobRepository = {
     filters?: { status?: string; type?: string },
     limit?: number,
     cursor?: Record<string, unknown>,
+    sortOrder?: "asc" | "desc",
   ): Promise<{ items: Job[]; nextCursor?: Record<string, unknown> }> {  
   const filterExpressions: string[] = [];
   const expressionAttributeNames: Record<string, string> = {};
@@ -74,11 +75,21 @@ export const jobRepository = {
         ...(cursor ? { ExclusiveStartKey: cursor } : {}),
     }),
   );
+  const items = ((response.Items as Job[] | undefined) ?? []).sort((a, b) => {
+  const aTime = new Date(a.createdAt).getTime();
+  const bTime = new Date(b.createdAt).getTime();
 
-  return {
-  items: (response.Items as Job[] | undefined) ?? [],
-  nextCursor: response.LastEvaluatedKey as Record<string, unknown> | undefined,
-};
+  if (sortOrder === "asc") {
+    return aTime - bTime;
+  }
+
+    return bTime - aTime;
+    });
+
+    return {
+     items,
+      nextCursor: response.LastEvaluatedKey as Record<string, unknown> | undefined,
+    };
 },
 
   async claimJobIfPending(id: string): Promise<Job | undefined> {

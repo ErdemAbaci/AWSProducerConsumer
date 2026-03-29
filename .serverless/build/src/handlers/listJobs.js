@@ -56,7 +56,7 @@ var jobRepository = {
     );
     return response.Item;
   },
-  async listJobs(filters, limit, cursor) {
+  async listJobs(filters, limit, cursor, sortOrder) {
     const filterExpressions = [];
     const expressionAttributeNames = {};
     const expressionAttributeValues = {};
@@ -82,8 +82,16 @@ var jobRepository = {
         ...cursor ? { ExclusiveStartKey: cursor } : {}
       })
     );
+    const items = (response.Items ?? []).sort((a, b) => {
+      const aTime = new Date(a.createdAt).getTime();
+      const bTime = new Date(b.createdAt).getTime();
+      if (sortOrder === "asc") {
+        return aTime - bTime;
+      }
+      return bTime - aTime;
+    });
     return {
-      items: response.Items ?? [],
+      items,
       nextCursor: response.LastEvaluatedKey
     };
   },
@@ -231,8 +239,10 @@ async function handler(event) {
   try {
     const rawLimit = event.queryStringParameters?.limit;
     const rawCursor = event.queryStringParameters?.cursor;
+    const rawSortOrder = event.queryStringParameters?.sortOrder;
     let parsedLimit;
     let parsedCursor;
+    let parsedSortOrder;
     if (rawLimit !== void 0) {
       const numericLimit = Number(rawLimit);
       if (!Number.isInteger(numericLimit) || Number.isNaN(numericLimit) || numericLimit < 1) {
@@ -251,11 +261,19 @@ async function handler(event) {
         });
       }
     }
+    if (rawSortOrder !== void 0) {
+      if (rawSortOrder !== "asc" && rawSortOrder !== "desc") {
+        return json(400, {
+          message: "sortOrder must be either 'asc' or 'desc'"
+        });
+      }
+      parsedSortOrder = rawSortOrder;
+    }
     const filters = {
       status: event.queryStringParameters?.status,
       type: event.queryStringParameters?.type
     };
-    const result = await jobRepository.listJobs(filters, parsedLimit, parsedCursor);
+    const result = await jobRepository.listJobs(filters, parsedLimit, parsedCursor, parsedSortOrder);
     return json(200, {
       items: result.items.map((job) => toJobResponse(job)),
       nextCursor: result.nextCursor ? encodeURIComponent(JSON.stringify(result.nextCursor)) : void 0

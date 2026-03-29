@@ -56,7 +56,7 @@ var jobRepository = {
     );
     return response.Item;
   },
-  async listJobs(filters, limit, cursor) {
+  async listJobs(filters, limit, cursor, sortOrder) {
     const filterExpressions = [];
     const expressionAttributeNames = {};
     const expressionAttributeValues = {};
@@ -82,8 +82,16 @@ var jobRepository = {
         ...cursor ? { ExclusiveStartKey: cursor } : {}
       })
     );
+    const items = (response.Items ?? []).sort((a, b) => {
+      const aTime = new Date(a.createdAt).getTime();
+      const bTime = new Date(b.createdAt).getTime();
+      if (sortOrder === "asc") {
+        return aTime - bTime;
+      }
+      return bTime - aTime;
+    });
     return {
-      items: response.Items ?? [],
+      items,
       nextCursor: response.LastEvaluatedKey
     };
   },
