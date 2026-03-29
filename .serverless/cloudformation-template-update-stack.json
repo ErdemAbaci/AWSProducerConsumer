@@ -20,6 +20,12 @@
         "LogGroupName": "/aws/lambda/job-system-dev-processJob"
       }
     },
+    "ListJobsLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/job-system-dev-listJobs"
+      }
+    },
     "IamRoleLambdaExecution": {
       "Type": "AWS::IAM::Role",
       "Properties": {
@@ -83,7 +89,8 @@
                   "Action": [
                     "dynamodb:GetItem",
                     "dynamodb:PutItem",
-                    "dynamodb:UpdateItem"
+                    "dynamodb:UpdateItem",
+                    "dynamodb:Scan"
                   ],
                   "Resource": [
                     {
@@ -152,7 +159,7 @@
       "Properties": {
         "Code": {
           "S3Bucket": "serverless-framework-deployments-eu-central-1-1958194b-d298",
-          "S3Key": "serverless/job-system/dev/1774712555584-2026-03-28T15:42:35.584Z/job-system.zip"
+          "S3Key": "serverless/job-system/dev/1774797391184-2026-03-29T15:16:31.184Z/job-system.zip"
         },
         "Handler": "src/handlers/createJob.handler",
         "Runtime": "nodejs18.x",
@@ -184,7 +191,7 @@
       "Properties": {
         "Code": {
           "S3Bucket": "serverless-framework-deployments-eu-central-1-1958194b-d298",
-          "S3Key": "serverless/job-system/dev/1774712555584-2026-03-28T15:42:35.584Z/job-system.zip"
+          "S3Key": "serverless/job-system/dev/1774797391184-2026-03-29T15:16:31.184Z/job-system.zip"
         },
         "Handler": "src/handlers/getJob.handler",
         "Runtime": "nodejs18.x",
@@ -216,7 +223,7 @@
       "Properties": {
         "Code": {
           "S3Bucket": "serverless-framework-deployments-eu-central-1-1958194b-d298",
-          "S3Key": "serverless/job-system/dev/1774712555584-2026-03-28T15:42:35.584Z/job-system.zip"
+          "S3Key": "serverless/job-system/dev/1774797391184-2026-03-29T15:16:31.184Z/job-system.zip"
         },
         "Handler": "src/handlers/processJob.handler",
         "Runtime": "nodejs18.x",
@@ -243,34 +250,76 @@
         "ProcessJobLogGroup"
       ]
     },
-    "CreateJobLambdaVersionogXYNphnoGysDoi0N0aCT3tQVWevM61fVhH8T8fXc": {
+    "ListJobsLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": "serverless-framework-deployments-eu-central-1-1958194b-d298",
+          "S3Key": "serverless/job-system/dev/1774797391184-2026-03-29T15:16:31.184Z/job-system.zip"
+        },
+        "Handler": "src/handlers/listJobs.handler",
+        "Runtime": "nodejs18.x",
+        "FunctionName": "job-system-dev-listJobs",
+        "MemorySize": 1024,
+        "Timeout": 6,
+        "Environment": {
+          "Variables": {
+            "JOBS_TABLE_NAME": "job-system-dev-jobs",
+            "JOBS_QUEUE_URL": {
+              "Ref": "JobsQueue"
+            },
+            "NODE_OPTIONS": "--enable-source-maps"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "ListJobsLogGroup"
+      ]
+    },
+    "CreateJobLambdaVersionJEXkMuZjcxhQULScWz8m8dh8ASPBC6AtJRabBVKHg": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "CreateJobLambdaFunction"
         },
-        "CodeSha256": "kazQguhTtf1xiC5p6JylIlPWzEEJkuxdHITPUQqL9e4="
+        "CodeSha256": "/Kf9DxmBHRdcstt3ri7hcSig9hJ6RaXq7Fsx9jfNMo4="
       }
     },
-    "GetJobLambdaVersionmo2mg5WtqF2OmQgHIhTbSOonUYKywFMmFI6062rrI": {
+    "GetJobLambdaVersionQq5phBvKJz9wFAi1FRW4397ydtqjaU3HL6aaEl8qc": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "GetJobLambdaFunction"
         },
-        "CodeSha256": "kazQguhTtf1xiC5p6JylIlPWzEEJkuxdHITPUQqL9e4="
+        "CodeSha256": "/Kf9DxmBHRdcstt3ri7hcSig9hJ6RaXq7Fsx9jfNMo4="
       }
     },
-    "ProcessJobLambdaVersion1SYfDY27tvxLVo0bKSnIGZvrUlU6joHwzrnAxzmcg": {
+    "ProcessJobLambdaVersionxyOMqyx6ZYCWWV2n3KuGoD91uq2Og6OJIEsH0fwpNso": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "ProcessJobLambdaFunction"
         },
-        "CodeSha256": "kazQguhTtf1xiC5p6JylIlPWzEEJkuxdHITPUQqL9e4="
+        "CodeSha256": "/Kf9DxmBHRdcstt3ri7hcSig9hJ6RaXq7Fsx9jfNMo4="
+      }
+    },
+    "ListJobsLambdaVersion1zNiCpk0DLzkHJlx98B8eWk5UHOpcVgc5XX7y6YvrJE": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "ListJobsLambdaFunction"
+        },
+        "CodeSha256": "/Kf9DxmBHRdcstt3ri7hcSig9hJ6RaXq7Fsx9jfNMo4="
       }
     },
     "ProcessJobEventSourceMappingSQSJobsQueue": {
@@ -465,6 +514,81 @@
       },
       "DependsOn": "HttpApiIntegrationGetJob"
     },
+    "ListJobsLambdaPermissionHttpApi": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "ListJobsLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition"
+              },
+              ":execute-api:",
+              {
+                "Ref": "AWS::Region"
+              },
+              ":",
+              {
+                "Ref": "AWS::AccountId"
+              },
+              ":",
+              {
+                "Ref": "HttpApi"
+              },
+              "/*"
+            ]
+          ]
+        }
+      }
+    },
+    "HttpApiIntegrationListJobs": {
+      "Type": "AWS::ApiGatewayV2::Integration",
+      "Properties": {
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "IntegrationType": "AWS_PROXY",
+        "IntegrationUri": {
+          "Fn::GetAtt": [
+            "ListJobsLambdaFunction",
+            "Arn"
+          ]
+        },
+        "PayloadFormatVersion": "2.0",
+        "TimeoutInMillis": 30000
+      }
+    },
+    "HttpApiRouteGetJobs": {
+      "Type": "AWS::ApiGatewayV2::Route",
+      "Properties": {
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "RouteKey": "GET /jobs",
+        "Target": {
+          "Fn::Join": [
+            "/",
+            [
+              "integrations",
+              {
+                "Ref": "HttpApiIntegrationListJobs"
+              }
+            ]
+          ]
+        }
+      },
+      "DependsOn": "HttpApiIntegrationListJobs"
+    },
     "JobsTable": {
       "Type": "AWS::DynamoDB::Table",
       "Properties": {
@@ -516,7 +640,7 @@
     "CreateJobLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "CreateJobLambdaVersionogXYNphnoGysDoi0N0aCT3tQVWevM61fVhH8T8fXc"
+        "Ref": "CreateJobLambdaVersionJEXkMuZjcxhQULScWz8m8dh8ASPBC6AtJRabBVKHg"
       },
       "Export": {
         "Name": "sls-job-system-dev-CreateJobLambdaFunctionQualifiedArn"
@@ -525,7 +649,7 @@
     "GetJobLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "GetJobLambdaVersionmo2mg5WtqF2OmQgHIhTbSOonUYKywFMmFI6062rrI"
+        "Ref": "GetJobLambdaVersionQq5phBvKJz9wFAi1FRW4397ydtqjaU3HL6aaEl8qc"
       },
       "Export": {
         "Name": "sls-job-system-dev-GetJobLambdaFunctionQualifiedArn"
@@ -534,10 +658,19 @@
     "ProcessJobLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "ProcessJobLambdaVersion1SYfDY27tvxLVo0bKSnIGZvrUlU6joHwzrnAxzmcg"
+        "Ref": "ProcessJobLambdaVersionxyOMqyx6ZYCWWV2n3KuGoD91uq2Og6OJIEsH0fwpNso"
       },
       "Export": {
         "Name": "sls-job-system-dev-ProcessJobLambdaFunctionQualifiedArn"
+      }
+    },
+    "ListJobsLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "ListJobsLambdaVersion1zNiCpk0DLzkHJlx98B8eWk5UHOpcVgc5XX7y6YvrJE"
+      },
+      "Export": {
+        "Name": "sls-job-system-dev-ListJobsLambdaFunctionQualifiedArn"
       }
     },
     "HttpApiId": {

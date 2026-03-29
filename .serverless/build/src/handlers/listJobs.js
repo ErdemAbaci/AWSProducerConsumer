@@ -16,12 +16,12 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/handlers/processJob.ts
-var processJob_exports = {};
-__export(processJob_exports, {
+// src/handlers/listJobs.ts
+var listJobs_exports = {};
+__export(listJobs_exports, {
   handler: () => handler
 });
-module.exports = __toCommonJS(processJob_exports);
+module.exports = __toCommonJS(listJobs_exports);
 
 // src/repositories/jobRepository.ts
 var import_client_dynamodb = require("@aws-sdk/client-dynamodb");
@@ -197,84 +197,49 @@ var jobRepository = {
   }
 };
 
-// src/services/jobProcessors/demoProcessor.ts
-var import_node_crypto = require("node:crypto");
-function processDemoJob(job) {
-  if (job.payload["shouldFail"] === true) {
-    throw new Error("Job was asked to fail");
-  }
+// src/mappers/jobResponseMapper.ts
+function toJobResponse(job) {
   return {
-    message: "Job processed successfully",
-    processedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    executionId: (0, import_node_crypto.randomUUID)()
+    id: job.id,
+    type: job.type,
+    status: job.status,
+    attemptCount: job.attemptCount,
+    createdAt: job.createdAt,
+    updatedAt: job.updatedAt,
+    history: job.history,
+    result: job.result,
+    error: job.error
   };
 }
 
-// src/services/jobProcessors/emailProcessor.ts
-var import_node_crypto2 = require("node:crypto");
-function processEmailJob(job) {
-  const { to, subject, body } = job.payload;
-  if (typeof to !== "string" || to.trim() === "" || typeof subject !== "string" || subject.trim() === "" || typeof body !== "string" || body.trim() === "") {
-    throw new Error("Invalid email payload");
-  }
+// src/handlers/listJobs.ts
+function json(statusCode, body) {
   return {
-    message: "Email job processed successfully",
-    processedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    executionId: (0, import_node_crypto2.randomUUID)(),
-    recipient: to,
-    subject
+    statusCode,
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
   };
-}
-
-// src/services/jobProcessors/processorRegistry.ts
-var processorRegistry = {
-  demo: processDemoJob,
-  email: processEmailJob
-};
-
-// src/handlers/processJob.ts
-function parseMessage(body) {
-  try {
-    const parsed = JSON.parse(body);
-    if (!parsed || typeof parsed !== "object" || typeof parsed.jobId !== "string") {
-      return null;
-    }
-    return parsed;
-  } catch {
-    return null;
-  }
 }
 async function handler(event) {
-  for (const record of event.Records) {
-    const message = parseMessage(record.body);
-    if (!message) {
-      console.error("Skipping invalid SQS message", record.body);
-      continue;
-    }
-    const job = await jobRepository.claimJobIfPending(message.jobId);
-    if (!job) {
-      console.log(`Job ${message.jobId} is missing or already claimed/processed`);
-      continue;
-    }
-    try {
-      const processor = processorRegistry[job.type];
-      if (!processor) {
-        throw new Error(`Unsupported job type: ${job.type}`);
-      }
-      const result = processor(job);
-      await jobRepository.markAsCompleted(job.id, job.type, result);
-    } catch (error) {
-      await jobRepository.markAsFailed(
-        job.id,
-        job.type,
-        error instanceof Error ? error.message : "Unknown error"
-      );
-      throw error;
-    }
+  try {
+    const filters = {
+      status: event.queryStringParameters?.status,
+      type: event.queryStringParameters?.type
+    };
+    const jobs = await jobRepository.listJobs(filters);
+    return json(
+      200,
+      jobs.map((job) => toJobResponse(job))
+    );
+  } catch (error) {
+    console.error("Failed to list jobs", error);
+    return json(500, { message: "Could not list jobs" });
   }
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   handler
 });
-//# sourceMappingURL=processJob.js.map
+//# sourceMappingURL=listJobs.js.map

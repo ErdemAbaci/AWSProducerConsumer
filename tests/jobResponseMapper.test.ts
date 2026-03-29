@@ -27,7 +27,7 @@ describe("toJobResponse", () => {
           status: "processing",
           timestamp: "2026-01-01T10:01:00.000Z",
           metadata: {
-            attemptIncrementBy: 1,
+            attemptCount: 2,
           },
         },
         {
@@ -61,7 +61,7 @@ describe("toJobResponse", () => {
           status: "processing",
           timestamp: "2026-01-01T10:01:00.000Z",
           metadata: {
-            attemptIncrementBy: 1,
+            attemptCount: 2,
           },
         },
         {
@@ -101,7 +101,7 @@ describe("toJobResponse", () => {
           status: "processing",
           timestamp: "2026-01-02T09:00:30.000Z",
           metadata: {
-            attemptIncrementBy: 1,
+            attemptCount: 1,
           },
         },
         {
@@ -139,7 +139,7 @@ describe("toJobResponse", () => {
           status: "processing",
           timestamp: "2026-01-02T09:00:30.000Z",
           metadata: {
-            attemptIncrementBy: 1,
+            attemptCount: 1,
           },
         },
         {

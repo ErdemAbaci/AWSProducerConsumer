@@ -57,13 +57,45 @@ var jobRepository = {
     );
     return response.Item;
   },
+  async listJobs(filters) {
+    const filterExpressions = [];
+    const expressionAttributeNames = {};
+    const expressionAttributeValues = {};
+    if (filters?.status) {
+      filterExpressions.push("#status = :status");
+      expressionAttributeNames["#status"] = "status";
+      expressionAttributeValues[":status"] = filters.status;
+    }
+    if (filters?.type) {
+      filterExpressions.push("#type = :type");
+      expressionAttributeNames["#type"] = "type";
+      expressionAttributeValues[":type"] = filters.type;
+    }
+    const response = await dynamoDb.send(
+      new import_lib_dynamodb.ScanCommand({
+        TableName: getTableName(),
+        ...filterExpressions.length > 0 ? {
+          FilterExpression: filterExpressions.join(" AND "),
+          ExpressionAttributeNames: expressionAttributeNames,
+          ExpressionAttributeValues: expressionAttributeValues
+        } : {}
+      })
+    );
+    return response.Items ?? [];
+  },
   async claimJobIfPending(id) {
+    const existingJob = await this.getById(id);
+    if (!existingJob) {
+      return void 0;
+    }
+    const updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    const nextAttemptCount = existingJob.attemptCount + 1;
     try {
       const response = await dynamoDb.send(
         new import_lib_dynamodb.UpdateCommand({
           TableName: getTableName(),
           Key: { id },
-          UpdateExpression: "SET #status = :processing, updatedAt = :updatedAt, attemptCount = attemptCount + :increment, #history = list_append(#history, :historyEvent)",
+          UpdateExpression: "SET #status = :processing, updatedAt = :updatedAt, attemptCount = :attemptCount, #history = list_append(#history, :historyEvent)",
           ConditionExpression: "#status = :pending",
           ExpressionAttributeNames: {
             "#status": "status",
@@ -72,12 +104,16 @@ var jobRepository = {
           ExpressionAttributeValues: {
             ":pending": "pending",
             ":processing": "processing",
-            ":updatedAt": (/* @__PURE__ */ new Date()).toISOString(),
-            ":increment": 1,
+            ":updatedAt": updatedAt,
+            ":attemptCount": nextAttemptCount,
             ":historyEvent": [
               {
+                eventType: "status_change",
                 status: "processing",
-                timestamp: (/* @__PURE__ */ new Date()).toISOString()
+                timestamp: updatedAt,
+                metadata: {
+                  attemptCount: nextAttemptCount
+                }
               }
             ]
           },
@@ -92,7 +128,7 @@ var jobRepository = {
       throw error;
     }
   },
-  async markAsCompleted(id, result) {
+  async markAsCompleted(id, jobType, result) {
     const updatedAt = (/* @__PURE__ */ new Date()).toISOString();
     const response = await dynamoDb.send(
       new import_lib_dynamodb.UpdateCommand({
@@ -111,9 +147,13 @@ var jobRepository = {
           ":result": result,
           ":historyEvent": [
             {
+              eventType: "status_change",
               status: "completed",
               timestamp: updatedAt,
-              message: typeof result?.message === "string" ? result.message : "Job completed"
+              message: typeof result?.message === "string" ? result.message : "Job completed",
+              metadata: {
+                jobType
+              }
             }
           ]
         },
@@ -122,7 +162,7 @@ var jobRepository = {
     );
     return response.Attributes;
   },
-  async markAsFailed(id, errorMessage) {
+  async markAsFailed(id, jobType, errorMessage) {
     const updatedAt = (/* @__PURE__ */ new Date()).toISOString();
     const response = await dynamoDb.send(
       new import_lib_dynamodb.UpdateCommand({
@@ -141,9 +181,13 @@ var jobRepository = {
           ":error": errorMessage,
           ":historyEvent": [
             {
+              eventType: "status_change",
               status: "failed",
               timestamp: updatedAt,
-              message: errorMessage
+              message: errorMessage,
+              metadata: {
+                jobType
+              }
             }
           ]
         },
@@ -273,6 +317,7 @@ async function handler(event) {
     updatedAt: now,
     history: [
       {
+        eventType: "status_change",
         status: "pending",
         timestamp: now
       }
