@@ -39,7 +39,11 @@ export const jobRepository = {
 
     return response.Item as Job | undefined;
   },
-    async listJobs(filters?: { status?: string; type?: string }): Promise<Job[]> {
+  async listJobs(
+    filters?: { status?: string; type?: string },
+    limit?: number,
+    cursor?: Record<string, unknown>,
+  ): Promise<{ items: Job[]; nextCursor?: Record<string, unknown> }> {  
   const filterExpressions: string[] = [];
   const expressionAttributeNames: Record<string, string> = {};
   const expressionAttributeValues: Record<string, unknown> = {};
@@ -66,10 +70,15 @@ export const jobRepository = {
             ExpressionAttributeValues: expressionAttributeValues,
           }
         : {}),
+        ...(limit ? { Limit: limit } : {}),
+        ...(cursor ? { ExclusiveStartKey: cursor } : {}),
     }),
   );
 
-  return (response.Items as Job[] | undefined) ?? [];
+  return {
+  items: (response.Items as Job[] | undefined) ?? [],
+  nextCursor: response.LastEvaluatedKey as Record<string, unknown> | undefined,
+};
 },
 
   async claimJobIfPending(id: string): Promise<Job | undefined> {

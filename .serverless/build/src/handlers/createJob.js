@@ -57,7 +57,7 @@ var jobRepository = {
     );
     return response.Item;
   },
-  async listJobs(filters) {
+  async listJobs(filters, limit, cursor) {
     const filterExpressions = [];
     const expressionAttributeNames = {};
     const expressionAttributeValues = {};
@@ -78,10 +78,15 @@ var jobRepository = {
           FilterExpression: filterExpressions.join(" AND "),
           ExpressionAttributeNames: expressionAttributeNames,
           ExpressionAttributeValues: expressionAttributeValues
-        } : {}
+        } : {},
+        ...limit ? { Limit: limit } : {},
+        ...cursor ? { ExclusiveStartKey: cursor } : {}
       })
     );
-    return response.Items ?? [];
+    return {
+      items: response.Items ?? [],
+      nextCursor: response.LastEvaluatedKey
+    };
   },
   async claimJobIfPending(id) {
     const existingJob = await this.getById(id);

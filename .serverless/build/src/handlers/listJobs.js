@@ -56,7 +56,7 @@ var jobRepository = {
     );
     return response.Item;
   },
-  async listJobs(filters) {
+  async listJobs(filters, limit, cursor) {
     const filterExpressions = [];
     const expressionAttributeNames = {};
     const expressionAttributeValues = {};
@@ -77,10 +77,15 @@ var jobRepository = {
           FilterExpression: filterExpressions.join(" AND "),
           ExpressionAttributeNames: expressionAttributeNames,
           ExpressionAttributeValues: expressionAttributeValues
-        } : {}
+        } : {},
+        ...limit ? { Limit: limit } : {},
+        ...cursor ? { ExclusiveStartKey: cursor } : {}
       })
     );
-    return response.Items ?? [];
+    return {
+      items: response.Items ?? [],
+      nextCursor: response.LastEvaluatedKey
+    };
   },
   async claimJobIfPending(id) {
     const existingJob = await this.getById(id);
@@ -224,15 +229,37 @@ function json(statusCode, body) {
 }
 async function handler(event) {
   try {
+    const rawLimit = event.queryStringParameters?.limit;
+    const rawCursor = event.queryStringParameters?.cursor;
+    let parsedLimit;
+    let parsedCursor;
+    if (rawLimit !== void 0) {
+      const numericLimit = Number(rawLimit);
+      if (!Number.isInteger(numericLimit) || Number.isNaN(numericLimit) || numericLimit < 1) {
+        return json(400, {
+          message: "limit must be a positive integer"
+        });
+      }
+      parsedLimit = numericLimit;
+    }
+    if (rawCursor !== void 0) {
+      try {
+        parsedCursor = JSON.parse(decodeURIComponent(rawCursor));
+      } catch (error) {
+        return json(400, {
+          message: "cursor must be a valid encoded JSON object"
+        });
+      }
+    }
     const filters = {
       status: event.queryStringParameters?.status,
       type: event.queryStringParameters?.type
     };
-    const jobs = await jobRepository.listJobs(filters);
-    return json(
-      200,
-      jobs.map((job) => toJobResponse(job))
-    );
+    const result = await jobRepository.listJobs(filters, parsedLimit, parsedCursor);
+    return json(200, {
+      items: result.items.map((job) => toJobResponse(job)),
+      nextCursor: result.nextCursor ? encodeURIComponent(JSON.stringify(result.nextCursor)) : void 0
+    });
   } catch (error) {
     console.error("Failed to list jobs", error);
     return json(500, { message: "Could not list jobs" });

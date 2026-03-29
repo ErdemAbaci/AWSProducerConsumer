@@ -11,6 +11,8 @@ type ApiEvent = {
     queryStringParameters?: {
         status?: string;
         type?: string;
+        limit?: string;
+        cursor?: string;
     } | null;
 }
 
@@ -26,16 +28,47 @@ function json(statusCode: number, body: unknown): ApiResponse {
 
 export async function handler(event: ApiEvent): Promise<ApiResponse> {
   try {
+    const rawLimit = event.queryStringParameters?.limit;
+    const rawCursor = event.queryStringParameters?.cursor;
+    let parsedLimit: number | undefined;
+    let parsedCursor: Record<string, unknown> | undefined;
+    if (rawLimit !== undefined) {
+     const numericLimit = Number(rawLimit);
+
+     if (
+      !Number.isInteger(numericLimit) ||
+      Number.isNaN(numericLimit) ||
+      numericLimit < 1
+     ) {
+     return json(400, {
+      message: "limit must be a positive integer",
+     });
+     }
+    parsedLimit = numericLimit;
+    }
+    if (rawCursor !== undefined){
+      try{
+        parsedCursor = JSON.parse(decodeURIComponent(rawCursor));
+      }
+      catch (error) {
+        return json(400, {
+        message: "cursor must be a valid encoded JSON object",
+        });
+      }
+    
+    } 
     const filters = {
         status: event.queryStringParameters?.status,
         type: event.queryStringParameters?.type,
     };
-    const jobs = await jobRepository.listJobs(filters);
+    const result = await jobRepository.listJobs(filters, parsedLimit, parsedCursor);
     
-    return json(
-      200,
-      jobs.map((job) => toJobResponse(job)),
-    );
+    return json(200, {
+     items: result.items.map((job) => toJobResponse(job)),
+     nextCursor: result.nextCursor
+     ? encodeURIComponent(JSON.stringify(result.nextCursor))
+     : undefined,
+  });
   } catch (error) {
     console.error("Failed to list jobs", error);
 
