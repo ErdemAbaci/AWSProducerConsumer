@@ -225,6 +225,71 @@ function toJobResponse(job) {
   };
 }
 
+// src/services/jobValidation/listJobsQueryValidator.ts
+var allowedStatuses = ["pending", "processing", "completed", "failed"];
+var allowedTypes = ["demo", "email"];
+function validateListJobsQuery(query) {
+  const rawLimit = query?.limit;
+  const rawCursor = query?.cursor;
+  const rawSortOrder = query?.sortOrder;
+  let parsedLimit;
+  let parsedCursor;
+  let parsedSortOrder;
+  if (rawLimit !== void 0) {
+    const numericLimit = Number(rawLimit);
+    if (!Number.isInteger(numericLimit) || Number.isNaN(numericLimit) || numericLimit < 1) {
+      return {
+        ok: false,
+        message: "limit must be a positive integer"
+      };
+    }
+    parsedLimit = numericLimit;
+  }
+  if (rawCursor !== void 0) {
+    try {
+      parsedCursor = JSON.parse(decodeURIComponent(rawCursor));
+    } catch {
+      return {
+        ok: false,
+        message: "cursor must be a valid encoded JSON object"
+      };
+    }
+  }
+  if (rawSortOrder !== void 0) {
+    if (rawSortOrder !== "asc" && rawSortOrder !== "desc") {
+      return {
+        ok: false,
+        message: "sortOrder must be either 'asc' or 'desc'"
+      };
+    }
+    parsedSortOrder = rawSortOrder;
+  }
+  if (query?.status !== void 0 && !allowedStatuses.includes(query.status)) {
+    return {
+      ok: false,
+      message: "status must be one of: pending, processing, completed, failed"
+    };
+  }
+  if (query?.type !== void 0 && !allowedTypes.includes(query.type)) {
+    return {
+      ok: false,
+      message: "type must be one of: demo, email"
+    };
+  }
+  return {
+    ok: true,
+    data: {
+      filters: {
+        status: query?.status,
+        type: query?.type
+      },
+      limit: parsedLimit,
+      cursor: parsedCursor,
+      sortOrder: parsedSortOrder
+    }
+  };
+}
+
 // src/handlers/listJobs.ts
 function json(statusCode, body) {
   return {
@@ -237,43 +302,17 @@ function json(statusCode, body) {
 }
 async function handler(event) {
   try {
-    const rawLimit = event.queryStringParameters?.limit;
-    const rawCursor = event.queryStringParameters?.cursor;
-    const rawSortOrder = event.queryStringParameters?.sortOrder;
-    let parsedLimit;
-    let parsedCursor;
-    let parsedSortOrder;
-    if (rawLimit !== void 0) {
-      const numericLimit = Number(rawLimit);
-      if (!Number.isInteger(numericLimit) || Number.isNaN(numericLimit) || numericLimit < 1) {
-        return json(400, {
-          message: "limit must be a positive integer"
-        });
-      }
-      parsedLimit = numericLimit;
+    const validation = validateListJobsQuery(event.queryStringParameters);
+    if (!validation.ok) {
+      return json(400, { message: validation.message });
     }
-    if (rawCursor !== void 0) {
-      try {
-        parsedCursor = JSON.parse(decodeURIComponent(rawCursor));
-      } catch (error) {
-        return json(400, {
-          message: "cursor must be a valid encoded JSON object"
-        });
-      }
-    }
-    if (rawSortOrder !== void 0) {
-      if (rawSortOrder !== "asc" && rawSortOrder !== "desc") {
-        return json(400, {
-          message: "sortOrder must be either 'asc' or 'desc'"
-        });
-      }
-      parsedSortOrder = rawSortOrder;
-    }
-    const filters = {
-      status: event.queryStringParameters?.status,
-      type: event.queryStringParameters?.type
-    };
-    const result = await jobRepository.listJobs(filters, parsedLimit, parsedCursor, parsedSortOrder);
+    const { filters, limit, cursor, sortOrder } = validation.data;
+    const result = await jobRepository.listJobs(
+      filters,
+      limit,
+      cursor,
+      sortOrder
+    );
     return json(200, {
       items: result.items.map((job) => toJobResponse(job)),
       nextCursor: result.nextCursor ? encodeURIComponent(JSON.stringify(result.nextCursor)) : void 0
