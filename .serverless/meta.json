@@ -8,18 +8,30 @@
       "custom": {
         "jobsTableName": "job-system-dev-jobs",
         "jobsQueueName": "job-system-dev-jobs-queue",
-        "jobsDlqName": "job-system-dev-jobs-dlq"
+        "jobsDlqName": "job-system-dev-jobs-dlq",
+        "cognitoUserPoolId": "eu-central-1_neVVyaSp4",
+        "cognitoAppClientId": "1q3rk6ierkvgb3jlae7d320q6f"
       },
       "provider": {
         "name": "aws",
         "runtime": "nodejs18.x",
         "region": "eu-central-1",
         "stage": "dev",
+        "httpApi": {
+          "authorizers": {
+            "cognitoJwtAuthorizer": {
+              "identitySource": "$request.header.Authorization",
+              "issuerUrl": "https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1_neVVyaSp4",
+              "audience": "1q3rk6ierkvgb3jlae7d320q6f"
+            }
+          }
+        },
         "environment": {
           "JOBS_TABLE_NAME": "job-system-dev-jobs",
           "JOBS_QUEUE_URL": {
             "Ref": "JobsQueue"
-          }
+          },
+          "SES_FROM_EMAIL": "erdemootv1@gmail.com"
         },
         "iam": {
           "role": {
@@ -57,6 +69,13 @@
                     ]
                   }
                 ]
+              },
+              {
+                "Effect": "Allow",
+                "Action": [
+                  "ses:SendEmail"
+                ],
+                "Resource": "*"
               }
             ]
           }
@@ -185,6 +204,13 @@
                         {
                           "Effect": "Allow",
                           "Action": [
+                            "ses:SendEmail"
+                          ],
+                          "Resource": "*"
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
                             "sqs:ReceiveMessage",
                             "sqs:DeleteMessage",
                             "sqs:GetQueueAttributes"
@@ -223,7 +249,7 @@
               "Properties": {
                 "Code": {
                   "S3Bucket": "serverless-framework-deployments-eu-central-1-1958194b-d298",
-                  "S3Key": "serverless/job-system/dev/1774879792764-2026-03-30T14:09:52.764Z/job-system.zip"
+                  "S3Key": "serverless/job-system/dev/1774899263190-2026-03-30T19:34:23.190Z/job-system.zip"
                 },
                 "Handler": "src/handlers/createJob.handler",
                 "Runtime": "nodejs18.x",
@@ -236,6 +262,7 @@
                     "JOBS_QUEUE_URL": {
                       "Ref": "JobsQueue"
                     },
+                    "SES_FROM_EMAIL": "erdemootv1@gmail.com",
                     "NODE_OPTIONS": "--enable-source-maps"
                   }
                 },
@@ -255,7 +282,7 @@
               "Properties": {
                 "Code": {
                   "S3Bucket": "serverless-framework-deployments-eu-central-1-1958194b-d298",
-                  "S3Key": "serverless/job-system/dev/1774879792764-2026-03-30T14:09:52.764Z/job-system.zip"
+                  "S3Key": "serverless/job-system/dev/1774899263190-2026-03-30T19:34:23.190Z/job-system.zip"
                 },
                 "Handler": "src/handlers/getJob.handler",
                 "Runtime": "nodejs18.x",
@@ -268,6 +295,7 @@
                     "JOBS_QUEUE_URL": {
                       "Ref": "JobsQueue"
                     },
+                    "SES_FROM_EMAIL": "erdemootv1@gmail.com",
                     "NODE_OPTIONS": "--enable-source-maps"
                   }
                 },
@@ -287,7 +315,7 @@
               "Properties": {
                 "Code": {
                   "S3Bucket": "serverless-framework-deployments-eu-central-1-1958194b-d298",
-                  "S3Key": "serverless/job-system/dev/1774879792764-2026-03-30T14:09:52.764Z/job-system.zip"
+                  "S3Key": "serverless/job-system/dev/1774899263190-2026-03-30T19:34:23.190Z/job-system.zip"
                 },
                 "Handler": "src/handlers/processJob.handler",
                 "Runtime": "nodejs18.x",
@@ -300,6 +328,7 @@
                     "JOBS_QUEUE_URL": {
                       "Ref": "JobsQueue"
                     },
+                    "SES_FROM_EMAIL": "erdemootv1@gmail.com",
                     "NODE_OPTIONS": "--enable-source-maps"
                   }
                 },
@@ -319,7 +348,7 @@
               "Properties": {
                 "Code": {
                   "S3Bucket": "serverless-framework-deployments-eu-central-1-1958194b-d298",
-                  "S3Key": "serverless/job-system/dev/1774879792764-2026-03-30T14:09:52.764Z/job-system.zip"
+                  "S3Key": "serverless/job-system/dev/1774899263190-2026-03-30T19:34:23.190Z/job-system.zip"
                 },
                 "Handler": "src/handlers/listJobs.handler",
                 "Runtime": "nodejs18.x",
@@ -332,6 +361,7 @@
                     "JOBS_QUEUE_URL": {
                       "Ref": "JobsQueue"
                     },
+                    "SES_FROM_EMAIL": "erdemootv1@gmail.com",
                     "NODE_OPTIONS": "--enable-source-maps"
                   }
                 },
@@ -346,44 +376,44 @@
                 "ListJobsLogGroup"
               ]
             },
-            "CreateJobLambdaVersionlI8XaZFMhpJfF1nGo0Kd4M1cIcXdkR0Kn60JTxmsem4": {
+            "CreateJobLambdaVersiongHbsmDNBHhhvs5pOnICbPf063Vq4EopdMOLuIzJhjWY": {
               "Type": "AWS::Lambda::Version",
               "DeletionPolicy": "Retain",
               "Properties": {
                 "FunctionName": {
                   "Ref": "CreateJobLambdaFunction"
                 },
-                "CodeSha256": "k49UBsTD8B19lsEPtHPB6W+bBsV+BPeG95buHb/Lqyk="
+                "CodeSha256": "OU6iTAe3XMKQPocqtDUaYegGrG1ClwV9QL+bEJegUJ0="
               }
             },
-            "GetJobLambdaVersion7EoqJL0lL7vsIKz05Hk4J7oOgWs4gCRxTZeXULJcQ": {
+            "GetJobLambdaVersionlrHuroebRPzPIxI0fgmuMdmLOpUlDGShsHUFKMJs7E": {
               "Type": "AWS::Lambda::Version",
               "DeletionPolicy": "Retain",
               "Properties": {
                 "FunctionName": {
                   "Ref": "GetJobLambdaFunction"
                 },
-                "CodeSha256": "k49UBsTD8B19lsEPtHPB6W+bBsV+BPeG95buHb/Lqyk="
+                "CodeSha256": "OU6iTAe3XMKQPocqtDUaYegGrG1ClwV9QL+bEJegUJ0="
               }
             },
-            "ProcessJobLambdaVersionf2kBK971l7YVw3hc2UMjuGC3sY2vYrqcujuHOxIXeI": {
+            "ProcessJobLambdaVersion7b2qQ29vcTurkHYiuh21ljcy0Dve54hqkeryeSlrNk": {
               "Type": "AWS::Lambda::Version",
               "DeletionPolicy": "Retain",
               "Properties": {
                 "FunctionName": {
                   "Ref": "ProcessJobLambdaFunction"
                 },
-                "CodeSha256": "k49UBsTD8B19lsEPtHPB6W+bBsV+BPeG95buHb/Lqyk="
+                "CodeSha256": "OU6iTAe3XMKQPocqtDUaYegGrG1ClwV9QL+bEJegUJ0="
               }
             },
-            "ListJobsLambdaVersion5oRhBw90zXNnZ4RGmu1pNCqMY1aJtyvBG5eLpUEqs": {
+            "ListJobsLambdaVersion5pfQJ53EI35W4UuUkcFNBQMwY16Ad0AQ4w4A6WXqM": {
               "Type": "AWS::Lambda::Version",
               "DeletionPolicy": "Retain",
               "Properties": {
                 "FunctionName": {
                   "Ref": "ListJobsLambdaFunction"
                 },
-                "CodeSha256": "k49UBsTD8B19lsEPtHPB6W+bBsV+BPeG95buHb/Lqyk="
+                "CodeSha256": "OU6iTAe3XMKQPocqtDUaYegGrG1ClwV9QL+bEJegUJ0="
               }
             },
             "ProcessJobEventSourceMappingSQSJobsQueue": {
@@ -425,6 +455,25 @@
                 "AutoDeploy": true,
                 "DefaultRouteSettings": {
                   "DetailedMetricsEnabled": false
+                }
+              }
+            },
+            "HttpApiAuthorizerCognitoJwtAuthorizer": {
+              "Type": "AWS::ApiGatewayV2::Authorizer",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "HttpApi"
+                },
+                "Name": "cognitoJwtAuthorizer",
+                "IdentitySource": [
+                  "$request.header.Authorization"
+                ],
+                "AuthorizerType": "JWT",
+                "JwtConfiguration": {
+                  "Audience": [
+                    "1q3rk6ierkvgb3jlae7d320q6f"
+                  ],
+                  "Issuer": "https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1_neVVyaSp4"
                 }
               }
             },
@@ -499,6 +548,10 @@
                       }
                     ]
                   ]
+                },
+                "AuthorizationType": "JWT",
+                "AuthorizerId": {
+                  "Ref": "HttpApiAuthorizerCognitoJwtAuthorizer"
                 }
               },
               "DependsOn": "HttpApiIntegrationCreateJob"
@@ -574,6 +627,10 @@
                       }
                     ]
                   ]
+                },
+                "AuthorizationType": "JWT",
+                "AuthorizerId": {
+                  "Ref": "HttpApiAuthorizerCognitoJwtAuthorizer"
                 }
               },
               "DependsOn": "HttpApiIntegrationGetJob"
@@ -649,6 +706,10 @@
                       }
                     ]
                   ]
+                },
+                "AuthorizationType": "JWT",
+                "AuthorizerId": {
+                  "Ref": "HttpApiAuthorizerCognitoJwtAuthorizer"
                 }
               },
               "DependsOn": "HttpApiIntegrationListJobs"
@@ -704,7 +765,7 @@
             "CreateJobLambdaFunctionQualifiedArn": {
               "Description": "Current Lambda function version",
               "Value": {
-                "Ref": "CreateJobLambdaVersionlI8XaZFMhpJfF1nGo0Kd4M1cIcXdkR0Kn60JTxmsem4"
+                "Ref": "CreateJobLambdaVersiongHbsmDNBHhhvs5pOnICbPf063Vq4EopdMOLuIzJhjWY"
               },
               "Export": {
                 "Name": "sls-job-system-dev-CreateJobLambdaFunctionQualifiedArn"
@@ -713,7 +774,7 @@
             "GetJobLambdaFunctionQualifiedArn": {
               "Description": "Current Lambda function version",
               "Value": {
-                "Ref": "GetJobLambdaVersion7EoqJL0lL7vsIKz05Hk4J7oOgWs4gCRxTZeXULJcQ"
+                "Ref": "GetJobLambdaVersionlrHuroebRPzPIxI0fgmuMdmLOpUlDGShsHUFKMJs7E"
               },
               "Export": {
                 "Name": "sls-job-system-dev-GetJobLambdaFunctionQualifiedArn"
@@ -722,7 +783,7 @@
             "ProcessJobLambdaFunctionQualifiedArn": {
               "Description": "Current Lambda function version",
               "Value": {
-                "Ref": "ProcessJobLambdaVersionf2kBK971l7YVw3hc2UMjuGC3sY2vYrqcujuHOxIXeI"
+                "Ref": "ProcessJobLambdaVersion7b2qQ29vcTurkHYiuh21ljcy0Dve54hqkeryeSlrNk"
               },
               "Export": {
                 "Name": "sls-job-system-dev-ProcessJobLambdaFunctionQualifiedArn"
@@ -731,7 +792,7 @@
             "ListJobsLambdaFunctionQualifiedArn": {
               "Description": "Current Lambda function version",
               "Value": {
-                "Ref": "ListJobsLambdaVersion5oRhBw90zXNnZ4RGmu1pNCqMY1aJtyvBG5eLpUEqs"
+                "Ref": "ListJobsLambdaVersion5pfQJ53EI35W4UuUkcFNBQMwY16Ad0AQ4w4A6WXqM"
               },
               "Export": {
                 "Name": "sls-job-system-dev-ListJobsLambdaFunctionQualifiedArn"
@@ -782,7 +843,10 @@
             {
               "httpApi": {
                 "path": "/jobs",
-                "method": "post"
+                "method": "post",
+                "authorizer": {
+                  "name": "cognitoJwtAuthorizer"
+                }
               },
               "resolvedMethod": "POST",
               "resolvedPath": "/jobs"
@@ -797,7 +861,7 @@
           "timeout": 6,
           "runtime": "nodejs18.x",
           "vpc": {},
-          "versionLogicalId": "CreateJobLambdaVersionlI8XaZFMhpJfF1nGo0Kd4M1cIcXdkR0Kn60JTxmsem4"
+          "versionLogicalId": "CreateJobLambdaVersiongHbsmDNBHhhvs5pOnICbPf063Vq4EopdMOLuIzJhjWY"
         },
         "getJob": {
           "handler": "src/handlers/getJob.handler",
@@ -805,7 +869,10 @@
             {
               "httpApi": {
                 "path": "/jobs/{id}",
-                "method": "get"
+                "method": "get",
+                "authorizer": {
+                  "name": "cognitoJwtAuthorizer"
+                }
               },
               "resolvedMethod": "GET",
               "resolvedPath": "/jobs/{id}"
@@ -820,7 +887,7 @@
           "timeout": 6,
           "runtime": "nodejs18.x",
           "vpc": {},
-          "versionLogicalId": "GetJobLambdaVersion7EoqJL0lL7vsIKz05Hk4J7oOgWs4gCRxTZeXULJcQ"
+          "versionLogicalId": "GetJobLambdaVersionlrHuroebRPzPIxI0fgmuMdmLOpUlDGShsHUFKMJs7E"
         },
         "processJob": {
           "handler": "src/handlers/processJob.handler",
@@ -833,7 +900,8 @@
                     "Arn"
                   ]
                 },
-                "batchSize": 1
+                "batchSize": 1,
+                "maximumRetryAttempts": 2
               }
             }
           ],
@@ -846,7 +914,7 @@
           "timeout": 6,
           "runtime": "nodejs18.x",
           "vpc": {},
-          "versionLogicalId": "ProcessJobLambdaVersionf2kBK971l7YVw3hc2UMjuGC3sY2vYrqcujuHOxIXeI"
+          "versionLogicalId": "ProcessJobLambdaVersion7b2qQ29vcTurkHYiuh21ljcy0Dve54hqkeryeSlrNk"
         },
         "listJobs": {
           "handler": "src/handlers/listJobs.handler",
@@ -854,7 +922,10 @@
             {
               "httpApi": {
                 "path": "/jobs",
-                "method": "get"
+                "method": "get",
+                "authorizer": {
+                  "name": "cognitoJwtAuthorizer"
+                }
               },
               "resolvedMethod": "GET",
               "resolvedPath": "/jobs"
@@ -869,7 +940,7 @@
           "timeout": 6,
           "runtime": "nodejs18.x",
           "vpc": {},
-          "versionLogicalId": "ListJobsLambdaVersion5oRhBw90zXNnZ4RGmu1pNCqMY1aJtyvBG5eLpUEqs"
+          "versionLogicalId": "ListJobsLambdaVersion5pfQJ53EI35W4UuUkcFNBQMwY16Ad0AQ4w4A6WXqM"
         }
       },
       "resources": {
@@ -923,11 +994,21 @@
       "runtime": "nodejs18.x",
       "region": "eu-central-1",
       "stage": "dev",
+      "httpApi": {
+        "authorizers": {
+          "cognitoJwtAuthorizer": {
+            "identitySource": "$request.header.Authorization",
+            "issuerUrl": "https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1_neVVyaSp4",
+            "audience": "1q3rk6ierkvgb3jlae7d320q6f"
+          }
+        }
+      },
       "environment": {
         "JOBS_TABLE_NAME": "job-system-dev-jobs",
         "JOBS_QUEUE_URL": {
           "Ref": "JobsQueue"
-        }
+        },
+        "SES_FROM_EMAIL": "erdemootv1@gmail.com"
       },
       "iam": {
         "role": {
@@ -965,6 +1046,13 @@
                   ]
                 }
               ]
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "ses:SendEmail"
+              ],
+              "Resource": "*"
             }
           ]
         }
@@ -1093,6 +1181,13 @@
                       {
                         "Effect": "Allow",
                         "Action": [
+                          "ses:SendEmail"
+                        ],
+                        "Resource": "*"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
                           "sqs:ReceiveMessage",
                           "sqs:DeleteMessage",
                           "sqs:GetQueueAttributes"
@@ -1131,7 +1226,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-eu-central-1-1958194b-d298",
-                "S3Key": "serverless/job-system/dev/1774879792764-2026-03-30T14:09:52.764Z/job-system.zip"
+                "S3Key": "serverless/job-system/dev/1774899263190-2026-03-30T19:34:23.190Z/job-system.zip"
               },
               "Handler": "src/handlers/createJob.handler",
               "Runtime": "nodejs18.x",
@@ -1144,6 +1239,7 @@
                   "JOBS_QUEUE_URL": {
                     "Ref": "JobsQueue"
                   },
+                  "SES_FROM_EMAIL": "erdemootv1@gmail.com",
                   "NODE_OPTIONS": "--enable-source-maps"
                 }
               },
@@ -1163,7 +1259,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-eu-central-1-1958194b-d298",
-                "S3Key": "serverless/job-system/dev/1774879792764-2026-03-30T14:09:52.764Z/job-system.zip"
+                "S3Key": "serverless/job-system/dev/1774899263190-2026-03-30T19:34:23.190Z/job-system.zip"
               },
               "Handler": "src/handlers/getJob.handler",
               "Runtime": "nodejs18.x",
@@ -1176,6 +1272,7 @@
                   "JOBS_QUEUE_URL": {
                     "Ref": "JobsQueue"
                   },
+                  "SES_FROM_EMAIL": "erdemootv1@gmail.com",
                   "NODE_OPTIONS": "--enable-source-maps"
                 }
               },
@@ -1195,7 +1292,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-eu-central-1-1958194b-d298",
-                "S3Key": "serverless/job-system/dev/1774879792764-2026-03-30T14:09:52.764Z/job-system.zip"
+                "S3Key": "serverless/job-system/dev/1774899263190-2026-03-30T19:34:23.190Z/job-system.zip"
               },
               "Handler": "src/handlers/processJob.handler",
               "Runtime": "nodejs18.x",
@@ -1208,6 +1305,7 @@
                   "JOBS_QUEUE_URL": {
                     "Ref": "JobsQueue"
                   },
+                  "SES_FROM_EMAIL": "erdemootv1@gmail.com",
                   "NODE_OPTIONS": "--enable-source-maps"
                 }
               },
@@ -1227,7 +1325,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-eu-central-1-1958194b-d298",
-                "S3Key": "serverless/job-system/dev/1774879792764-2026-03-30T14:09:52.764Z/job-system.zip"
+                "S3Key": "serverless/job-system/dev/1774899263190-2026-03-30T19:34:23.190Z/job-system.zip"
               },
               "Handler": "src/handlers/listJobs.handler",
               "Runtime": "nodejs18.x",
@@ -1240,6 +1338,7 @@
                   "JOBS_QUEUE_URL": {
                     "Ref": "JobsQueue"
                   },
+                  "SES_FROM_EMAIL": "erdemootv1@gmail.com",
                   "NODE_OPTIONS": "--enable-source-maps"
                 }
               },
@@ -1254,44 +1353,44 @@
               "ListJobsLogGroup"
             ]
           },
-          "CreateJobLambdaVersionlI8XaZFMhpJfF1nGo0Kd4M1cIcXdkR0Kn60JTxmsem4": {
+          "CreateJobLambdaVersiongHbsmDNBHhhvs5pOnICbPf063Vq4EopdMOLuIzJhjWY": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "CreateJobLambdaFunction"
               },
-              "CodeSha256": "k49UBsTD8B19lsEPtHPB6W+bBsV+BPeG95buHb/Lqyk="
+              "CodeSha256": "OU6iTAe3XMKQPocqtDUaYegGrG1ClwV9QL+bEJegUJ0="
             }
           },
-          "GetJobLambdaVersion7EoqJL0lL7vsIKz05Hk4J7oOgWs4gCRxTZeXULJcQ": {
+          "GetJobLambdaVersionlrHuroebRPzPIxI0fgmuMdmLOpUlDGShsHUFKMJs7E": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "GetJobLambdaFunction"
               },
-              "CodeSha256": "k49UBsTD8B19lsEPtHPB6W+bBsV+BPeG95buHb/Lqyk="
+              "CodeSha256": "OU6iTAe3XMKQPocqtDUaYegGrG1ClwV9QL+bEJegUJ0="
             }
           },
-          "ProcessJobLambdaVersionf2kBK971l7YVw3hc2UMjuGC3sY2vYrqcujuHOxIXeI": {
+          "ProcessJobLambdaVersion7b2qQ29vcTurkHYiuh21ljcy0Dve54hqkeryeSlrNk": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "ProcessJobLambdaFunction"
               },
-              "CodeSha256": "k49UBsTD8B19lsEPtHPB6W+bBsV+BPeG95buHb/Lqyk="
+              "CodeSha256": "OU6iTAe3XMKQPocqtDUaYegGrG1ClwV9QL+bEJegUJ0="
             }
           },
-          "ListJobsLambdaVersion5oRhBw90zXNnZ4RGmu1pNCqMY1aJtyvBG5eLpUEqs": {
+          "ListJobsLambdaVersion5pfQJ53EI35W4UuUkcFNBQMwY16Ad0AQ4w4A6WXqM": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "ListJobsLambdaFunction"
               },
-              "CodeSha256": "k49UBsTD8B19lsEPtHPB6W+bBsV+BPeG95buHb/Lqyk="
+              "CodeSha256": "OU6iTAe3XMKQPocqtDUaYegGrG1ClwV9QL+bEJegUJ0="
             }
           },
           "ProcessJobEventSourceMappingSQSJobsQueue": {
@@ -1333,6 +1432,25 @@
               "AutoDeploy": true,
               "DefaultRouteSettings": {
                 "DetailedMetricsEnabled": false
+              }
+            }
+          },
+          "HttpApiAuthorizerCognitoJwtAuthorizer": {
+            "Type": "AWS::ApiGatewayV2::Authorizer",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "Name": "cognitoJwtAuthorizer",
+              "IdentitySource": [
+                "$request.header.Authorization"
+              ],
+              "AuthorizerType": "JWT",
+              "JwtConfiguration": {
+                "Audience": [
+                  "1q3rk6ierkvgb3jlae7d320q6f"
+                ],
+                "Issuer": "https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1_neVVyaSp4"
               }
             }
           },
@@ -1407,6 +1525,10 @@
                     }
                   ]
                 ]
+              },
+              "AuthorizationType": "JWT",
+              "AuthorizerId": {
+                "Ref": "HttpApiAuthorizerCognitoJwtAuthorizer"
               }
             },
             "DependsOn": "HttpApiIntegrationCreateJob"
@@ -1482,6 +1604,10 @@
                     }
                   ]
                 ]
+              },
+              "AuthorizationType": "JWT",
+              "AuthorizerId": {
+                "Ref": "HttpApiAuthorizerCognitoJwtAuthorizer"
               }
             },
             "DependsOn": "HttpApiIntegrationGetJob"
@@ -1557,6 +1683,10 @@
                     }
                   ]
                 ]
+              },
+              "AuthorizationType": "JWT",
+              "AuthorizerId": {
+                "Ref": "HttpApiAuthorizerCognitoJwtAuthorizer"
               }
             },
             "DependsOn": "HttpApiIntegrationListJobs"
@@ -1612,7 +1742,7 @@
           "CreateJobLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "CreateJobLambdaVersionlI8XaZFMhpJfF1nGo0Kd4M1cIcXdkR0Kn60JTxmsem4"
+              "Ref": "CreateJobLambdaVersiongHbsmDNBHhhvs5pOnICbPf063Vq4EopdMOLuIzJhjWY"
             },
             "Export": {
               "Name": "sls-job-system-dev-CreateJobLambdaFunctionQualifiedArn"
@@ -1621,7 +1751,7 @@
           "GetJobLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "GetJobLambdaVersion7EoqJL0lL7vsIKz05Hk4J7oOgWs4gCRxTZeXULJcQ"
+              "Ref": "GetJobLambdaVersionlrHuroebRPzPIxI0fgmuMdmLOpUlDGShsHUFKMJs7E"
             },
             "Export": {
               "Name": "sls-job-system-dev-GetJobLambdaFunctionQualifiedArn"
@@ -1630,7 +1760,7 @@
           "ProcessJobLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "ProcessJobLambdaVersionf2kBK971l7YVw3hc2UMjuGC3sY2vYrqcujuHOxIXeI"
+              "Ref": "ProcessJobLambdaVersion7b2qQ29vcTurkHYiuh21ljcy0Dve54hqkeryeSlrNk"
             },
             "Export": {
               "Name": "sls-job-system-dev-ProcessJobLambdaFunctionQualifiedArn"
@@ -1639,7 +1769,7 @@
           "ListJobsLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "ListJobsLambdaVersion5oRhBw90zXNnZ4RGmu1pNCqMY1aJtyvBG5eLpUEqs"
+              "Ref": "ListJobsLambdaVersion5pfQJ53EI35W4UuUkcFNBQMwY16Ad0AQ4w4A6WXqM"
             },
             "Export": {
               "Name": "sls-job-system-dev-ListJobsLambdaFunctionQualifiedArn"
@@ -1692,7 +1822,7 @@
       "serviceProvider": null,
       "instanceParameters": null
     },
-    "serviceRawFile": "service: job-system\n\ncustom:\n  jobsTableName: ${self:service}-${sls:stage}-jobs\n  jobsQueueName: ${self:service}-${sls:stage}-jobs-queue\n  jobsDlqName: ${self:service}-${sls:stage}-jobs-dlq\n\nprovider:\n  name: aws\n  runtime: nodejs18.x\n  region: eu-central-1\n  stage: dev\n  environment:\n    JOBS_TABLE_NAME: ${self:custom.jobsTableName}\n    JOBS_QUEUE_URL:\n      Ref: JobsQueue\n  iam:\n    role:\n      statements:\n        - Effect: Allow\n          Action:\n            - dynamodb:GetItem\n            - dynamodb:PutItem\n            - dynamodb:UpdateItem\n            - dynamodb:Scan\n          Resource:\n            - !GetAtt JobsTable.Arn\n        - Effect: Allow\n          Action:\n            - sqs:SendMessage\n            - sqs:ReceiveMessage\n            - sqs:DeleteMessage\n            - sqs:GetQueueAttributes\n          Resource:\n            - !GetAtt JobsQueue.Arn\n\nfunctions:\n  createJob:\n    handler: src/handlers/createJob.handler\n    events:\n      - httpApi:\n          path: /jobs\n          method: post\n\n  getJob:\n    handler: src/handlers/getJob.handler\n    events:\n      - httpApi:\n          path: /jobs/{id}\n          method: get\n\n  processJob:\n    handler: src/handlers/processJob.handler\n    events:\n      - sqs:\n          arn: !GetAtt JobsQueue.Arn\n          batchSize: 1\n  listJobs:\n    handler: src/handlers/listJobs.handler\n    events:\n      - httpApi:\n          path: /jobs\n          method: get        \n\nresources:\n  Resources:\n    JobsTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ${self:custom.jobsTableName}\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - AttributeName: id\n            AttributeType: S\n        KeySchema:\n          - AttributeName: id\n            KeyType: HASH\n\n    JobsQueue:\n      Type: AWS::SQS::Queue\n      Properties:\n        QueueName: ${self:custom.jobsQueueName}\n        RedrivePolicy:\n          deadLetterTargetArn: !GetAtt JobsDlq.Arn\n          maxReceiveCount: 3\n\n    JobsDlq:\n      Type: AWS::SQS::Queue\n      Properties:\n        QueueName: ${self:custom.jobsDlqName}    ",
+    "serviceRawFile": "service: job-system\n\ncustom:\n  jobsTableName: ${self:service}-${sls:stage}-jobs\n  jobsQueueName: ${self:service}-${sls:stage}-jobs-queue\n  jobsDlqName: ${self:service}-${sls:stage}-jobs-dlq\n  cognitoUserPoolId: eu-central-1_neVVyaSp4\n  cognitoAppClientId: 1q3rk6ierkvgb3jlae7d320q6f\n\nprovider:\n  name: aws\n  runtime: nodejs18.x\n  region: eu-central-1\n  stage: dev\n  httpApi:\n    authorizers:\n      cognitoJwtAuthorizer:\n        identitySource: $request.header.Authorization\n        issuerUrl: https://cognito-idp.${self:provider.region}.amazonaws.com/${self:custom.cognitoUserPoolId}\n        audience:\n          - ${self:custom.cognitoAppClientId}\n  environment:\n    JOBS_TABLE_NAME: ${self:custom.jobsTableName}\n    JOBS_QUEUE_URL:\n      Ref: JobsQueue\n    SES_FROM_EMAIL: erdemootv1@gmail.com\n  iam:\n    role:\n      statements:\n        - Effect: Allow\n          Action:\n            - dynamodb:GetItem\n            - dynamodb:PutItem\n            - dynamodb:UpdateItem\n            - dynamodb:Scan\n          Resource:\n            - !GetAtt JobsTable.Arn\n        - Effect: Allow\n          Action:\n            - sqs:SendMessage\n            - sqs:ReceiveMessage\n            - sqs:DeleteMessage\n            - sqs:GetQueueAttributes\n          Resource:\n            - !GetAtt JobsQueue.Arn\n        - Effect: Allow\n          Action:\n            - ses:SendEmail\n          Resource: \"*\"\n\nfunctions:\n  createJob:\n    handler: src/handlers/createJob.handler\n    events:\n      - httpApi:\n          path: /jobs\n          method: post\n          authorizer:\n            name: cognitoJwtAuthorizer\n\n  getJob:\n    handler: src/handlers/getJob.handler\n    events:\n      - httpApi:\n          path: /jobs/{id}\n          method: get\n          authorizer:\n            name: cognitoJwtAuthorizer\n\n  processJob:\n    handler: src/handlers/processJob.handler\n    events:\n      - sqs:\n          arn: !GetAtt JobsQueue.Arn\n          batchSize: 1\n          maximumRetryAttempts: 2\n  listJobs:\n    handler: src/handlers/listJobs.handler\n    events:\n      - httpApi:\n          path: /jobs\n          method: get\n          authorizer:\n            name: cognitoJwtAuthorizer\n\nresources:\n  Resources:\n    JobsTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ${self:custom.jobsTableName}\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - AttributeName: id\n            AttributeType: S\n        KeySchema:\n          - AttributeName: id\n            KeyType: HASH\n\n    JobsQueue:\n      Type: AWS::SQS::Queue\n      Properties:\n        QueueName: ${self:custom.jobsQueueName}\n        RedrivePolicy:\n          deadLetterTargetArn: !GetAtt JobsDlq.Arn\n          maxReceiveCount: 3\n\n    JobsDlq:\n      Type: AWS::SQS::Queue\n      Properties:\n        QueueName: ${self:custom.jobsDlqName}",
     "command": [
       "deploy"
     ],
@@ -1705,24 +1835,24 @@
     "serviceProviderAwsCfStackName": "job-system-dev",
     "serviceProviderAwsCfStackId": "arn:aws:cloudformation:eu-central-1:987454179945:stack/job-system-dev/3827f380-2497-11f1-9c41-0a53951ec319",
     "serviceProviderAwsCfStackCreated": "2026-03-20T19:58:52.710Z",
-    "serviceProviderAwsCfStackUpdated": "2026-03-30T14:02:57.985Z",
+    "serviceProviderAwsCfStackUpdated": "2026-03-30T18:37:17.770Z",
     "serviceProviderAwsCfStackStatus": "UPDATE_COMPLETE",
     "serviceProviderAwsCfStackOutputs": [
       {
         "OutputKey": "ListJobsLambdaFunctionQualifiedArn",
-        "OutputValue": "arn:aws:lambda:eu-central-1:987454179945:function:job-system-dev-listJobs:9",
+        "OutputValue": "arn:aws:lambda:eu-central-1:987454179945:function:job-system-dev-listJobs:12",
         "Description": "Current Lambda function version",
         "ExportName": "sls-job-system-dev-ListJobsLambdaFunctionQualifiedArn"
       },
       {
         "OutputKey": "GetJobLambdaFunctionQualifiedArn",
-        "OutputValue": "arn:aws:lambda:eu-central-1:987454179945:function:job-system-dev-getJob:17",
+        "OutputValue": "arn:aws:lambda:eu-central-1:987454179945:function:job-system-dev-getJob:20",
         "Description": "Current Lambda function version",
         "ExportName": "sls-job-system-dev-GetJobLambdaFunctionQualifiedArn"
       },
       {
         "OutputKey": "CreateJobLambdaFunctionQualifiedArn",
-        "OutputValue": "arn:aws:lambda:eu-central-1:987454179945:function:job-system-dev-createJob:17",
+        "OutputValue": "arn:aws:lambda:eu-central-1:987454179945:function:job-system-dev-createJob:20",
         "Description": "Current Lambda function version",
         "ExportName": "sls-job-system-dev-CreateJobLambdaFunctionQualifiedArn"
       },
@@ -1734,7 +1864,7 @@
       },
       {
         "OutputKey": "ProcessJobLambdaFunctionQualifiedArn",
-        "OutputValue": "arn:aws:lambda:eu-central-1:987454179945:function:job-system-dev-processJob:17",
+        "OutputValue": "arn:aws:lambda:eu-central-1:987454179945:function:job-system-dev-processJob:20",
         "Description": "Current Lambda function version",
         "ExportName": "sls-job-system-dev-ProcessJobLambdaFunctionQualifiedArn"
       },
@@ -1873,6 +2003,13 @@
                     {
                       "Effect": "Allow",
                       "Action": [
+                        "ses:SendEmail"
+                      ],
+                      "Resource": "*"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
                         "sqs:ReceiveMessage",
                         "sqs:DeleteMessage",
                         "sqs:GetQueueAttributes"
@@ -1911,7 +2048,7 @@
           "Properties": {
             "Code": {
               "S3Bucket": "serverless-framework-deployments-eu-central-1-1958194b-d298",
-              "S3Key": "serverless/job-system/dev/1774879792764-2026-03-30T14:09:52.764Z/job-system.zip"
+              "S3Key": "serverless/job-system/dev/1774899263190-2026-03-30T19:34:23.190Z/job-system.zip"
             },
             "Handler": "src/handlers/createJob.handler",
             "Runtime": "nodejs18.x",
@@ -1924,6 +2061,7 @@
                 "JOBS_QUEUE_URL": {
                   "Ref": "JobsQueue"
                 },
+                "SES_FROM_EMAIL": "erdemootv1@gmail.com",
                 "NODE_OPTIONS": "--enable-source-maps"
               }
             },
@@ -1943,7 +2081,7 @@
           "Properties": {
             "Code": {
               "S3Bucket": "serverless-framework-deployments-eu-central-1-1958194b-d298",
-              "S3Key": "serverless/job-system/dev/1774879792764-2026-03-30T14:09:52.764Z/job-system.zip"
+              "S3Key": "serverless/job-system/dev/1774899263190-2026-03-30T19:34:23.190Z/job-system.zip"
             },
             "Handler": "src/handlers/getJob.handler",
             "Runtime": "nodejs18.x",
@@ -1956,6 +2094,7 @@
                 "JOBS_QUEUE_URL": {
                   "Ref": "JobsQueue"
                 },
+                "SES_FROM_EMAIL": "erdemootv1@gmail.com",
                 "NODE_OPTIONS": "--enable-source-maps"
               }
             },
@@ -1975,7 +2114,7 @@
           "Properties": {
             "Code": {
               "S3Bucket": "serverless-framework-deployments-eu-central-1-1958194b-d298",
-              "S3Key": "serverless/job-system/dev/1774879792764-2026-03-30T14:09:52.764Z/job-system.zip"
+              "S3Key": "serverless/job-system/dev/1774899263190-2026-03-30T19:34:23.190Z/job-system.zip"
             },
             "Handler": "src/handlers/processJob.handler",
             "Runtime": "nodejs18.x",
@@ -1988,6 +2127,7 @@
                 "JOBS_QUEUE_URL": {
                   "Ref": "JobsQueue"
                 },
+                "SES_FROM_EMAIL": "erdemootv1@gmail.com",
                 "NODE_OPTIONS": "--enable-source-maps"
               }
             },
@@ -2007,7 +2147,7 @@
           "Properties": {
             "Code": {
               "S3Bucket": "serverless-framework-deployments-eu-central-1-1958194b-d298",
-              "S3Key": "serverless/job-system/dev/1774879792764-2026-03-30T14:09:52.764Z/job-system.zip"
+              "S3Key": "serverless/job-system/dev/1774899263190-2026-03-30T19:34:23.190Z/job-system.zip"
             },
             "Handler": "src/handlers/listJobs.handler",
             "Runtime": "nodejs18.x",
@@ -2020,6 +2160,7 @@
                 "JOBS_QUEUE_URL": {
                   "Ref": "JobsQueue"
                 },
+                "SES_FROM_EMAIL": "erdemootv1@gmail.com",
                 "NODE_OPTIONS": "--enable-source-maps"
               }
             },
@@ -2034,44 +2175,44 @@
             "ListJobsLogGroup"
           ]
         },
-        "CreateJobLambdaVersionlI8XaZFMhpJfF1nGo0Kd4M1cIcXdkR0Kn60JTxmsem4": {
+        "CreateJobLambdaVersiongHbsmDNBHhhvs5pOnICbPf063Vq4EopdMOLuIzJhjWY": {
           "Type": "AWS::Lambda::Version",
           "DeletionPolicy": "Retain",
           "Properties": {
             "FunctionName": {
               "Ref": "CreateJobLambdaFunction"
             },
-            "CodeSha256": "k49UBsTD8B19lsEPtHPB6W+bBsV+BPeG95buHb/Lqyk="
+            "CodeSha256": "OU6iTAe3XMKQPocqtDUaYegGrG1ClwV9QL+bEJegUJ0="
           }
         },
-        "GetJobLambdaVersion7EoqJL0lL7vsIKz05Hk4J7oOgWs4gCRxTZeXULJcQ": {
+        "GetJobLambdaVersionlrHuroebRPzPIxI0fgmuMdmLOpUlDGShsHUFKMJs7E": {
           "Type": "AWS::Lambda::Version",
           "DeletionPolicy": "Retain",
           "Properties": {
             "FunctionName": {
               "Ref": "GetJobLambdaFunction"
             },
-            "CodeSha256": "k49UBsTD8B19lsEPtHPB6W+bBsV+BPeG95buHb/Lqyk="
+            "CodeSha256": "OU6iTAe3XMKQPocqtDUaYegGrG1ClwV9QL+bEJegUJ0="
           }
         },
-        "ProcessJobLambdaVersionf2kBK971l7YVw3hc2UMjuGC3sY2vYrqcujuHOxIXeI": {
+        "ProcessJobLambdaVersion7b2qQ29vcTurkHYiuh21ljcy0Dve54hqkeryeSlrNk": {
           "Type": "AWS::Lambda::Version",
           "DeletionPolicy": "Retain",
           "Properties": {
             "FunctionName": {
               "Ref": "ProcessJobLambdaFunction"
             },
-            "CodeSha256": "k49UBsTD8B19lsEPtHPB6W+bBsV+BPeG95buHb/Lqyk="
+            "CodeSha256": "OU6iTAe3XMKQPocqtDUaYegGrG1ClwV9QL+bEJegUJ0="
           }
         },
-        "ListJobsLambdaVersion5oRhBw90zXNnZ4RGmu1pNCqMY1aJtyvBG5eLpUEqs": {
+        "ListJobsLambdaVersion5pfQJ53EI35W4UuUkcFNBQMwY16Ad0AQ4w4A6WXqM": {
           "Type": "AWS::Lambda::Version",
           "DeletionPolicy": "Retain",
           "Properties": {
             "FunctionName": {
               "Ref": "ListJobsLambdaFunction"
             },
-            "CodeSha256": "k49UBsTD8B19lsEPtHPB6W+bBsV+BPeG95buHb/Lqyk="
+            "CodeSha256": "OU6iTAe3XMKQPocqtDUaYegGrG1ClwV9QL+bEJegUJ0="
           }
         },
         "ProcessJobEventSourceMappingSQSJobsQueue": {
@@ -2113,6 +2254,25 @@
             "AutoDeploy": true,
             "DefaultRouteSettings": {
               "DetailedMetricsEnabled": false
+            }
+          }
+        },
+        "HttpApiAuthorizerCognitoJwtAuthorizer": {
+          "Type": "AWS::ApiGatewayV2::Authorizer",
+          "Properties": {
+            "ApiId": {
+              "Ref": "HttpApi"
+            },
+            "Name": "cognitoJwtAuthorizer",
+            "IdentitySource": [
+              "$request.header.Authorization"
+            ],
+            "AuthorizerType": "JWT",
+            "JwtConfiguration": {
+              "Audience": [
+                "1q3rk6ierkvgb3jlae7d320q6f"
+              ],
+              "Issuer": "https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1_neVVyaSp4"
             }
           }
         },
@@ -2187,6 +2347,10 @@
                   }
                 ]
               ]
+            },
+            "AuthorizationType": "JWT",
+            "AuthorizerId": {
+              "Ref": "HttpApiAuthorizerCognitoJwtAuthorizer"
             }
           },
           "DependsOn": "HttpApiIntegrationCreateJob"
@@ -2262,6 +2426,10 @@
                   }
                 ]
               ]
+            },
+            "AuthorizationType": "JWT",
+            "AuthorizerId": {
+              "Ref": "HttpApiAuthorizerCognitoJwtAuthorizer"
             }
           },
           "DependsOn": "HttpApiIntegrationGetJob"
@@ -2337,6 +2505,10 @@
                   }
                 ]
               ]
+            },
+            "AuthorizationType": "JWT",
+            "AuthorizerId": {
+              "Ref": "HttpApiAuthorizerCognitoJwtAuthorizer"
             }
           },
           "DependsOn": "HttpApiIntegrationListJobs"
@@ -2392,7 +2564,7 @@
         "CreateJobLambdaFunctionQualifiedArn": {
           "Description": "Current Lambda function version",
           "Value": {
-            "Ref": "CreateJobLambdaVersionlI8XaZFMhpJfF1nGo0Kd4M1cIcXdkR0Kn60JTxmsem4"
+            "Ref": "CreateJobLambdaVersiongHbsmDNBHhhvs5pOnICbPf063Vq4EopdMOLuIzJhjWY"
           },
           "Export": {
             "Name": "sls-job-system-dev-CreateJobLambdaFunctionQualifiedArn"
@@ -2401,7 +2573,7 @@
         "GetJobLambdaFunctionQualifiedArn": {
           "Description": "Current Lambda function version",
           "Value": {
-            "Ref": "GetJobLambdaVersion7EoqJL0lL7vsIKz05Hk4J7oOgWs4gCRxTZeXULJcQ"
+            "Ref": "GetJobLambdaVersionlrHuroebRPzPIxI0fgmuMdmLOpUlDGShsHUFKMJs7E"
           },
           "Export": {
             "Name": "sls-job-system-dev-GetJobLambdaFunctionQualifiedArn"
@@ -2410,7 +2582,7 @@
         "ProcessJobLambdaFunctionQualifiedArn": {
           "Description": "Current Lambda function version",
           "Value": {
-            "Ref": "ProcessJobLambdaVersionf2kBK971l7YVw3hc2UMjuGC3sY2vYrqcujuHOxIXeI"
+            "Ref": "ProcessJobLambdaVersion7b2qQ29vcTurkHYiuh21ljcy0Dve54hqkeryeSlrNk"
           },
           "Export": {
             "Name": "sls-job-system-dev-ProcessJobLambdaFunctionQualifiedArn"
@@ -2419,7 +2591,7 @@
         "ListJobsLambdaFunctionQualifiedArn": {
           "Description": "Current Lambda function version",
           "Value": {
-            "Ref": "ListJobsLambdaVersion5oRhBw90zXNnZ4RGmu1pNCqMY1aJtyvBG5eLpUEqs"
+            "Ref": "ListJobsLambdaVersion5pfQJ53EI35W4UuUkcFNBQMwY16Ad0AQ4w4A6WXqM"
           },
           "Export": {
             "Name": "sls-job-system-dev-ListJobsLambdaFunctionQualifiedArn"

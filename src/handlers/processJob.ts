@@ -45,7 +45,7 @@ export async function handler(event: SqsEvent): Promise<void> {
     throw new Error(`Unsupported job type: ${job.type}`);
     }
 
-    const result = processor(job);
+    const result = await processor(job);
 
     await jobRepository.markAsCompleted(job.id, job.type, result);
     } catch (error) {

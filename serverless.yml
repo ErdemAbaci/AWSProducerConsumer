@@ -4,16 +4,26 @@ custom:
   jobsTableName: ${self:service}-${sls:stage}-jobs
   jobsQueueName: ${self:service}-${sls:stage}-jobs-queue
   jobsDlqName: ${self:service}-${sls:stage}-jobs-dlq
+  cognitoUserPoolId: eu-central-1_neVVyaSp4
+  cognitoAppClientId: 1q3rk6ierkvgb3jlae7d320q6f
 
 provider:
   name: aws
   runtime: nodejs18.x
   region: eu-central-1
   stage: dev
+  httpApi:
+    authorizers:
+      cognitoJwtAuthorizer:
+        identitySource: $request.header.Authorization
+        issuerUrl: https://cognito-idp.${self:provider.region}.amazonaws.com/${self:custom.cognitoUserPoolId}
+        audience:
+          - ${self:custom.cognitoAppClientId}
   environment:
     JOBS_TABLE_NAME: ${self:custom.jobsTableName}
     JOBS_QUEUE_URL:
       Ref: JobsQueue
+    SES_FROM_EMAIL: erdemootv1@gmail.com
   iam:
     role:
       statements:
@@ -33,6 +43,10 @@ provider:
             - sqs:GetQueueAttributes
           Resource:
             - !GetAtt JobsQueue.Arn
+        - Effect: Allow
+          Action:
+            - ses:SendEmail
+          Resource: "*"
 
 functions:
   createJob:
@@ -41,6 +55,8 @@ functions:
       - httpApi:
           path: /jobs
           method: post
+          authorizer:
+            name: cognitoJwtAuthorizer
 
   getJob:
     handler: src/handlers/getJob.handler
@@ -48,6 +64,8 @@ functions:
       - httpApi:
           path: /jobs/{id}
           method: get
+          authorizer:
+            name: cognitoJwtAuthorizer
 
   processJob:
     handler: src/handlers/processJob.handler
@@ -55,12 +73,15 @@ functions:
       - sqs:
           arn: !GetAtt JobsQueue.Arn
           batchSize: 1
+          maximumRetryAttempts: 2
   listJobs:
     handler: src/handlers/listJobs.handler
     events:
       - httpApi:
           path: /jobs
-          method: get        
+          method: get
+          authorizer:
+            name: cognitoJwtAuthorizer
 
 resources:
   Resources:
@@ -87,4 +108,4 @@ resources:
     JobsDlq:
       Type: AWS::SQS::Queue
       Properties:
-        QueueName: ${self:custom.jobsDlqName}    
+        QueueName: ${self:custom.jobsDlqName}

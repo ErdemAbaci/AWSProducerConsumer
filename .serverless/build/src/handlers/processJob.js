@@ -223,18 +223,60 @@ function processDemoJob(job) {
   };
 }
 
+// src/services/email/emailService.ts
+var import_client_sesv2 = require("@aws-sdk/client-sesv2");
+var sesClient = new import_client_sesv2.SESv2Client({});
+function getFromEmail() {
+  const fromEmail = process.env.SES_FROM_EMAIL;
+  if (!fromEmail) {
+    throw new Error("SES_FROM_EMAIL environment variable is required");
+  }
+  return fromEmail;
+}
+var emailService = {
+  async sendEmail(input) {
+    const command = new import_client_sesv2.SendEmailCommand({
+      FromEmailAddress: getFromEmail(),
+      Destination: {
+        ToAddresses: [input.to]
+      },
+      Content: {
+        Simple: {
+          Subject: {
+            Data: input.subject
+          },
+          Body: {
+            Text: {
+              Data: input.body
+            }
+          }
+        }
+      }
+    });
+    const response = await sesClient.send(command);
+    return {
+      messageId: response.MessageId ?? "unknown-message-id",
+      recipient: input.to
+    };
+  }
+};
+
 // src/services/jobProcessors/emailProcessor.ts
-var import_node_crypto2 = require("node:crypto");
-function processEmailJob(job) {
+async function processEmailJob(job) {
   const { to, subject, body } = job.payload;
   if (typeof to !== "string" || to.trim() === "" || typeof subject !== "string" || subject.trim() === "" || typeof body !== "string" || body.trim() === "") {
     throw new Error("Invalid email payload");
   }
+  const sendResult = await emailService.sendEmail({
+    to,
+    subject,
+    body
+  });
   return {
     message: "Email job processed successfully",
     processedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    executionId: (0, import_node_crypto2.randomUUID)(),
-    recipient: to,
+    recipient: sendResult.recipient,
+    messageId: sendResult.messageId,
     subject
   };
 }
@@ -274,7 +316,7 @@ async function handler(event) {
       if (!processor) {
         throw new Error(`Unsupported job type: ${job.type}`);
       }
-      const result = processor(job);
+      const result = await processor(job);
       await jobRepository.markAsCompleted(job.id, job.type, result);
     } catch (error) {
       await jobRepository.markAsFailed(

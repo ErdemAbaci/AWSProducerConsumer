@@ -303,6 +303,15 @@ function validateCreateJobRequest(body) {
   };
 }
 
+// src/services/auth/getCurrentUserId.ts
+function getCurrentUserId(event) {
+  const userId = event.requestContext?.authorizer?.jwt?.claims?.sub;
+  if (!userId) {
+    throw new Error("Authenticated user id could not be determined");
+  }
+  return userId;
+}
+
 // src/handlers/createJob.ts
 function json(statusCode, body) {
   return {
@@ -319,10 +328,17 @@ async function handler(event) {
     return json(400, { message: validation.message });
   }
   const request = validation.data;
+  let ownerId;
+  try {
+    ownerId = getCurrentUserId(event);
+  } catch {
+    return json(401, { message: "Authentication required" });
+  }
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const job = {
     id: (0, import_node_crypto.randomUUID)(),
     type: request.type,
+    ownerId,
     status: "pending",
     attemptCount: 0,
     payload: request.payload,

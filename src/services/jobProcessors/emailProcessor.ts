@@ -1,7 +1,7 @@
-import { randomUUID } from "node:crypto";
 import type { Job } from "../../types/job";
+import { emailService } from "../email/emailService";
 
-export function processEmailJob(job: Job) {
+export async function processEmailJob(job: Job) {
   const { to, subject, body } = job.payload;
 
   if (
@@ -15,11 +15,17 @@ export function processEmailJob(job: Job) {
     throw new Error("Invalid email payload");
   }
 
+  const sendResult = await emailService.sendEmail({
+    to,
+    subject,
+    body,
+  });
+
   return {
     message: "Email job processed successfully",
     processedAt: new Date().toISOString(),
-    executionId: randomUUID(),
-    recipient: to,
+    recipient: sendResult.recipient,
+    messageId: sendResult.messageId,
     subject,
   };
 }

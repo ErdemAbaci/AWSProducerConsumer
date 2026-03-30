@@ -181,16 +181,16 @@ describe("processJob handler", () => {
 
     expect(markAsCompletedMock).toHaveBeenCalledTimes(1);
     expect(markAsCompletedMock).toHaveBeenCalledWith(
-      "job-789",
-      "email",
-      expect.objectContaining({
-        message: "Email job processed successfully",
-        processedAt: expect.any(String),
-        executionId: expect.any(String),
-        recipient: "test@example.com",
-        subject: "Welcome",
-      }),
-    );
+  "job-789",
+  "email",
+  expect.objectContaining({
+    message: "Email job processed successfully",
+    processedAt: expect.any(String),
+    messageId: expect.any(String),
+    recipient: "test@example.com",
+    subject: "Welcome",
+  }),
+);
     expect(markAsFailedMock).not.toHaveBeenCalled();
   });
 

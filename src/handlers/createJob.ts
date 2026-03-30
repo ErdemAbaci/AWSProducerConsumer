@@ -3,9 +3,19 @@ import { jobRepository } from "../repositories/jobRepository";
 import { queueService } from "../services/queueService";
 import { validateCreateJobRequest } from "../services/jobValidation/createJobRequestValidator";
 import type { Job } from "../types/job";
+import { getCurrentUserId } from "../services/auth/getCurrentUserId";
 
 type ApiEvent = {
   body?: string | null;
+  requestContext?: {
+    authorizer?: {
+      jwt?: {
+        claims?: {
+          sub?: string;
+        };
+      };
+    };
+  };
 };
 
 type ApiResponse = {
@@ -33,10 +43,19 @@ export async function handler(event: ApiEvent): Promise<ApiResponse> {
 
   const request = validation.data;
 
+  let ownerId: string;
+
+  try {
+    ownerId = getCurrentUserId(event);
+  } catch {
+    return json(401, { message: "Authentication required" });
+  }
+
   const now = new Date().toISOString();
   const job: Job = {
   id: randomUUID(),
   type: request.type,
+  ownerId: ownerId,
   status: "pending",
   attemptCount: 0,
   payload: request.payload,
