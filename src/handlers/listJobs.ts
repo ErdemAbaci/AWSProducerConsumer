@@ -1,6 +1,7 @@
 import { jobRepository } from "../repositories/jobRepository";
 import { toJobResponse } from "../mappers/jobResponseMapper";
 import { validateListJobsQuery } from "../services/jobValidation/listJobsQueryValidator";
+import { getCurrentUserId } from "../services/auth/getCurrentUserId";
 type ApiResponse = {
   statusCode: number;
   headers: Record<string, string>;
@@ -15,6 +16,15 @@ type ApiEvent = {
     cursor?: string;
     sortOrder?: string;
   } | null;
+  requestContext?: {
+    authorizer?: {
+      jwt?: {
+        claims?: {
+          sub?: string;
+        };
+      };
+    };
+  };
 };
 
 function json(statusCode: number, body: unknown): ApiResponse {
@@ -28,6 +38,14 @@ function json(statusCode: number, body: unknown): ApiResponse {
 }
 
 export async function handler(event: ApiEvent): Promise<ApiResponse> {
+    let currentUserId: string;
+
+  try {
+      currentUserId = getCurrentUserId(event);
+  } catch {
+      return json(401, { message: "Authentication required" });
+  }
+
   try {
     const validation = validateListJobsQuery(event.queryStringParameters);
 
@@ -38,12 +56,14 @@ export async function handler(event: ApiEvent): Promise<ApiResponse> {
     const { filters, limit, cursor, sortOrder } = validation.data;
 
     const result = await jobRepository.listJobs(
-      filters,
+      {
+        ...filters,
+        ownerId: currentUserId,
+      },
       limit,
       cursor,
       sortOrder,
     );
-
     return json(200, {
       items: result.items.map((job) => toJobResponse(job)),
       nextCursor: result.nextCursor

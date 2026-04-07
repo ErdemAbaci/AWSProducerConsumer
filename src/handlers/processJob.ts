@@ -1,6 +1,7 @@
 import { jobRepository } from "../repositories/jobRepository";
 import { processorRegistry } from "../services/jobProcessors/processorRegistry";
 import type { JobMessage } from "../types/job";
+import { jobEventsPublisher } from "../services/events/jobEventsPublisher";
 
 type SqsEvent = {
   Records: Array<{
@@ -48,12 +49,30 @@ export async function handler(event: SqsEvent): Promise<void> {
     const result = await processor(job);
 
     await jobRepository.markAsCompleted(job.id, job.type, result);
+    
+    await jobEventsPublisher.publish({
+        eventType: "job.completed",
+        jobId: job.id,
+        jobType: job.type,
+        ownerId: job.ownerId,
+        timestamp: new Date().toISOString(),
+        result,
+      });
+      
     } catch (error) {
       await jobRepository.markAsFailed(
         job.id,
         job.type,
         error instanceof Error ? error.message : "Unknown error",
       );
+        await jobEventsPublisher.publish({
+        eventType: "job.failed",
+        jobId: job.id,
+        jobType: job.type,
+        ownerId: job.ownerId,
+        timestamp: new Date().toISOString(),
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
       throw error;
     }
   }

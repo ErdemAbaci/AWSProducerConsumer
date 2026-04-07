@@ -1,10 +1,20 @@
 import { jobRepository } from "../repositories/jobRepository";
 import { toJobResponse } from "../mappers/jobResponseMapper";
-// Bu dosya belirli bir işi almak için kullanılır. 
+import { getCurrentUserId} from "../services/auth/getCurrentUserId";
+
 type ApiEvent = {
   pathParameters?: {
     id?: string;
   } | null;
+  requestContext?: {
+    authorizer?: {
+      jwt?: {
+        claims?: {
+          sub?: string;
+        };
+      };
+    };
+  };
 };
 
 type ApiResponse = {
@@ -29,12 +39,21 @@ export async function handler(event: ApiEvent): Promise<ApiResponse> {
   if (!jobId) {
     return json(400, { message: "Job id is required" });
   }
+  let currentUserId: string;
+  try {
+    currentUserId = getCurrentUserId(event);
+  } catch {
+    return json(401, { message: "Authentication required" });
+  }
 
   try {
     const job = await jobRepository.getById(jobId);
 
     if (!job) {
       return json(404, { message: "Job not found" });
+    }
+    if (job.ownerId !== currentUserId) {
+     return json(403, { message: "You are not allowed to access this job" });
     }
 
     return json(200, toJobResponse(job));

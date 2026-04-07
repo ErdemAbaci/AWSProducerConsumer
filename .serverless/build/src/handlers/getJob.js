@@ -70,6 +70,11 @@ var jobRepository = {
       expressionAttributeNames["#type"] = "type";
       expressionAttributeValues[":type"] = filters.type;
     }
+    if (filters?.ownerId) {
+      filterExpressions.push("#ownerId = :ownerId");
+      expressionAttributeNames["#ownerId"] = "ownerId";
+      expressionAttributeValues[":ownerId"] = filters.ownerId;
+    }
     const response = await dynamoDb.send(
       new import_lib_dynamodb.ScanCommand({
         TableName: getTableName(),
@@ -225,6 +230,15 @@ function toJobResponse(job) {
   };
 }
 
+// src/services/auth/getCurrentUserId.ts
+function getCurrentUserId(event) {
+  const userId = event.requestContext?.authorizer?.jwt?.claims?.sub;
+  if (!userId) {
+    throw new Error("Authenticated user id could not be determined");
+  }
+  return userId;
+}
+
 // src/handlers/getJob.ts
 function json(statusCode, body) {
   return {
@@ -240,10 +254,19 @@ async function handler(event) {
   if (!jobId) {
     return json(400, { message: "Job id is required" });
   }
+  let currentUserId;
+  try {
+    currentUserId = getCurrentUserId(event);
+  } catch {
+    return json(401, { message: "Authentication required" });
+  }
   try {
     const job = await jobRepository.getById(jobId);
     if (!job) {
       return json(404, { message: "Job not found" });
+    }
+    if (job.ownerId !== currentUserId) {
+      return json(403, { message: "You are not allowed to access this job" });
     }
     return json(200, toJobResponse(job));
   } catch (error) {

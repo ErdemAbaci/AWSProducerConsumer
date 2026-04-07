@@ -14,6 +14,7 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.914.0",
     "@aws-sdk/client-sesv2": "^3.1019.0",
+    "@aws-sdk/client-sns": "^3.1025.0",
     "@aws-sdk/client-sqs": "^3.914.0",
     "@aws-sdk/lib-dynamodb": "^3.914.0"
   },

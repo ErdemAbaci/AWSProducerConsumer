@@ -40,11 +40,11 @@ export const jobRepository = {
     return response.Item as Job | undefined;
   },
   async listJobs(
-    filters?: { status?: string; type?: string },
-    limit?: number,
-    cursor?: Record<string, unknown>,
-    sortOrder?: "asc" | "desc",
-  ): Promise<{ items: Job[]; nextCursor?: Record<string, unknown> }> {  
+  filters?: { status?: string; type?: string; ownerId?: string },
+  limit?: number,
+  cursor?: Record<string, unknown>,
+  sortOrder?: "asc" | "desc",
+): Promise<{ items: Job[]; nextCursor?: Record<string, unknown> }> { 
   const filterExpressions: string[] = [];
   const expressionAttributeNames: Record<string, string> = {};
   const expressionAttributeValues: Record<string, unknown> = {};
@@ -59,6 +59,11 @@ export const jobRepository = {
     filterExpressions.push("#type = :type");
     expressionAttributeNames["#type"] = "type";
     expressionAttributeValues[":type"] = filters.type;
+  }
+  if (filters?.ownerId) {
+    filterExpressions.push("#ownerId = :ownerId");
+    expressionAttributeNames["#ownerId"] = "ownerId";
+    expressionAttributeValues[":ownerId"] = filters.ownerId;
   }
 
   const response = await dynamoDb.send(

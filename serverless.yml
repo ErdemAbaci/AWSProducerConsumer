@@ -5,8 +5,8 @@ custom:
   jobsQueueName: ${self:service}-${sls:stage}-jobs-queue
   jobsDlqName: ${self:service}-${sls:stage}-jobs-dlq
   cognitoUserPoolId: eu-central-1_neVVyaSp4
-  cognitoAppClientId: 1q3rk6ierkvgb3jlae7d320q6f
-
+  cognitoAppClientId: 3d43248p5o6ubdgirag8t36989
+  jobEventsTopicName: ${self:service}-${sls:stage}-job-events
 provider:
   name: aws
   runtime: nodejs18.x
@@ -24,6 +24,8 @@ provider:
     JOBS_QUEUE_URL:
       Ref: JobsQueue
     SES_FROM_EMAIL: erdemootv1@gmail.com
+    JOB_EVENTS_TOPIC_ARN:
+      Ref: JobEventsTopic
   iam:
     role:
       statements:
@@ -47,6 +49,11 @@ provider:
           Action:
             - ses:SendEmail
           Resource: "*"
+        - Effect: Allow
+          Action:
+            - sns:Publish
+          Resource:
+            - Ref: JobEventsTopic  
 
 functions:
   createJob:
@@ -109,3 +116,8 @@ resources:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: ${self:custom.jobsDlqName}
+
+    JobEventsTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: ${self:custom.jobEventsTopicName}    

@@ -71,6 +71,11 @@ var jobRepository = {
       expressionAttributeNames["#type"] = "type";
       expressionAttributeValues[":type"] = filters.type;
     }
+    if (filters?.ownerId) {
+      filterExpressions.push("#ownerId = :ownerId");
+      expressionAttributeNames["#ownerId"] = "ownerId";
+      expressionAttributeValues[":ownerId"] = filters.ownerId;
+    }
     const response = await dynamoDb.send(
       new import_lib_dynamodb.ScanCommand({
         TableName: getTableName(),
