@@ -292,6 +292,27 @@ var processorRegistry = {
   email: processEmailJob
 };
 
+// src/services/events/jobEventsPublisher.ts
+var import_client_sns = require("@aws-sdk/client-sns");
+var snsClient = new import_client_sns.SNSClient({});
+function getTopicArn() {
+  const topicArn = process.env.JOB_EVENTS_TOPIC_ARN;
+  if (!topicArn) {
+    throw new Error("JOB_EVENTS_TOPIC_ARN environment variable is required");
+  }
+  return topicArn;
+}
+var jobEventsPublisher = {
+  async publish(event) {
+    await snsClient.send(
+      new import_client_sns.PublishCommand({
+        TopicArn: getTopicArn(),
+        Message: JSON.stringify(event)
+      })
+    );
+  }
+};
+
 // src/handlers/processJob.ts
 function parseMessage(body) {
   try {
@@ -323,12 +344,28 @@ async function handler(event) {
       }
       const result = await processor(job);
       await jobRepository.markAsCompleted(job.id, job.type, result);
+      await jobEventsPublisher.publish({
+        eventType: "job.completed",
+        jobId: job.id,
+        jobType: job.type,
+        ownerId: job.ownerId,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        result
+      });
     } catch (error) {
       await jobRepository.markAsFailed(
         job.id,
         job.type,
         error instanceof Error ? error.message : "Unknown error"
       );
+      await jobEventsPublisher.publish({
+        eventType: "job.failed",
+        jobId: job.id,
+        jobType: job.type,
+        ownerId: job.ownerId,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
       throw error;
     }
   }

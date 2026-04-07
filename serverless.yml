@@ -13,6 +13,18 @@ provider:
   region: eu-central-1
   stage: dev
   httpApi:
+    cors:
+      allowedOrigins:
+        - http://localhost:5173
+        - http://127.0.0.1:5173
+      allowedHeaders:
+        - Content-Type
+        - Authorization
+      allowedMethods:
+        - GET
+        - POST
+        - OPTIONS
+      allowCredentials: false
     authorizers:
       cognitoJwtAuthorizer:
         identitySource: $request.header.Authorization
@@ -80,7 +92,6 @@ functions:
       - sqs:
           arn: !GetAtt JobsQueue.Arn
           batchSize: 1
-          maximumRetryAttempts: 2
   listJobs:
     handler: src/handlers/listJobs.handler
     events:
