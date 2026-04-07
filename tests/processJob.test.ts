@@ -8,13 +8,28 @@ vi.mock("../src/repositories/jobRepository", () => ({
   },
 }));
 
+vi.mock("../src/services/email/emailService", () => ({
+  emailService: {
+    sendEmail: vi.fn(),
+  },
+}));
+
+vi.mock("../src/services/events/jobEventsPublisher", () => ({
+  jobEventsPublisher: {
+    publish: vi.fn(),
+  },
+}));
+
 import { handler } from "../src/handlers/processJob";
 import { jobRepository } from "../src/repositories/jobRepository";
+import { emailService } from "../src/services/email/emailService";
+import { jobEventsPublisher } from "../src/services/events/jobEventsPublisher";
 import type { Job } from "../src/types/job";
 
 function buildJob(overrides: Partial<Job> = {}): Job {
   return {
     id: "job-123",
+    ownerId: "user-123",
     type: "demo",
     status: "pending",
     payload: {},
@@ -36,6 +51,8 @@ describe("processJob handler", () => {
   const claimJobIfPendingMock = vi.mocked(jobRepository.claimJobIfPending);
   const markAsCompletedMock = vi.mocked(jobRepository.markAsCompleted);
   const markAsFailedMock = vi.mocked(jobRepository.markAsFailed);
+  const sendEmailMock = vi.mocked(emailService.sendEmail);
+  const publishMock = vi.mocked(jobEventsPublisher.publish);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -44,6 +61,11 @@ describe("processJob handler", () => {
     claimJobIfPendingMock.mockResolvedValue(undefined);
     markAsCompletedMock.mockResolvedValue(undefined);
     markAsFailedMock.mockResolvedValue(undefined);
+    sendEmailMock.mockResolvedValue({
+      messageId: "message-123",
+      recipient: "test@example.com",
+    });
+    publishMock.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -64,6 +86,7 @@ describe("processJob handler", () => {
     expect(claimJobIfPendingMock).not.toHaveBeenCalled();
     expect(markAsCompletedMock).not.toHaveBeenCalled();
     expect(markAsFailedMock).not.toHaveBeenCalled();
+    expect(publishMock).not.toHaveBeenCalled();
   });
 
   it("should continue when claimJobIfPending returns undefined", async () => {
@@ -84,6 +107,7 @@ describe("processJob handler", () => {
     expect(claimJobIfPendingMock).toHaveBeenCalledWith("job-123");
     expect(markAsCompletedMock).not.toHaveBeenCalled();
     expect(markAsFailedMock).not.toHaveBeenCalled();
+    expect(publishMock).not.toHaveBeenCalled();
   });
 
   it("should mark job as completed for a valid demo job", async () => {
@@ -120,6 +144,19 @@ describe("processJob handler", () => {
       }),
     );
     expect(markAsFailedMock).not.toHaveBeenCalled();
+    expect(publishMock).toHaveBeenCalledTimes(1);
+    expect(publishMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: "job.completed",
+        jobId: "job-123",
+        jobType: "demo",
+        ownerId: "user-123",
+        timestamp: expect.any(String),
+        result: expect.objectContaining({
+          message: "Job processed successfully",
+        }),
+      }),
+    );
   });
 
   it("should mark job as failed when payload.shouldFail is true", async () => {
@@ -152,6 +189,17 @@ describe("processJob handler", () => {
       "Job was asked to fail",
     );
     expect(markAsCompletedMock).not.toHaveBeenCalled();
+    expect(publishMock).toHaveBeenCalledTimes(1);
+    expect(publishMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: "job.failed",
+        jobId: "job-456",
+        jobType: "demo",
+        ownerId: "user-123",
+        timestamp: expect.any(String),
+        error: "Job was asked to fail",
+      }),
+    );
   });
 
   it("should mark email jobs as completed when payload is valid", async () => {
@@ -181,17 +229,38 @@ describe("processJob handler", () => {
 
     expect(markAsCompletedMock).toHaveBeenCalledTimes(1);
     expect(markAsCompletedMock).toHaveBeenCalledWith(
-  "job-789",
-  "email",
-  expect.objectContaining({
-    message: "Email job processed successfully",
-    processedAt: expect.any(String),
-    messageId: expect.any(String),
-    recipient: "test@example.com",
-    subject: "Welcome",
-  }),
-);
+      "job-789",
+      "email",
+      expect.objectContaining({
+        message: "Email job processed successfully",
+        processedAt: expect.any(String),
+        messageId: "message-123",
+        recipient: "test@example.com",
+        subject: "Welcome",
+      }),
+    );
+    expect(sendEmailMock).toHaveBeenCalledTimes(1);
+    expect(sendEmailMock).toHaveBeenCalledWith({
+      to: "test@example.com",
+      subject: "Welcome",
+      body: "Hello there",
+    });
     expect(markAsFailedMock).not.toHaveBeenCalled();
+    expect(publishMock).toHaveBeenCalledTimes(1);
+    expect(publishMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: "job.completed",
+        jobId: "job-789",
+        jobType: "email",
+        ownerId: "user-123",
+        timestamp: expect.any(String),
+        result: expect.objectContaining({
+          message: "Email job processed successfully",
+          recipient: "test@example.com",
+          messageId: "message-123",
+        }),
+      }),
+    );
   });
 
   it("should mark email jobs as failed when payload is invalid", async () => {
@@ -225,7 +294,19 @@ describe("processJob handler", () => {
       "email",
       "Invalid email payload",
     );
+    expect(sendEmailMock).not.toHaveBeenCalled();
     expect(markAsCompletedMock).not.toHaveBeenCalled();
+    expect(publishMock).toHaveBeenCalledTimes(1);
+    expect(publishMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: "job.failed",
+        jobId: "job-790",
+        jobType: "email",
+        ownerId: "user-123",
+        timestamp: expect.any(String),
+        error: "Invalid email payload",
+      }),
+    );
   });
 
   it("should fail unsupported job types", async () => {
@@ -259,6 +340,17 @@ describe("processJob handler", () => {
       "Unsupported job type: sms",
     );
     expect(markAsCompletedMock).not.toHaveBeenCalled();
+    expect(publishMock).toHaveBeenCalledTimes(1);
+    expect(publishMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: "job.failed",
+        jobId: "job-791",
+        jobType: "sms",
+        ownerId: "user-123",
+        timestamp: expect.any(String),
+        error: "Unsupported job type: sms",
+      }),
+    );
   });
 
   it("should process multiple SQS records independently", async () => {
@@ -310,5 +402,12 @@ describe("processJob handler", () => {
     );
 
     expect(markAsFailedMock).not.toHaveBeenCalled();
+    expect(publishMock).toHaveBeenCalledTimes(1);
+    expect(publishMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: "job.completed",
+        jobId: "job-111",
+      }),
+    );
   });
 });

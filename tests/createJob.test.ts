@@ -20,15 +20,30 @@ function parseBody(response: { body: string }) {
   return JSON.parse(response.body);
 }
 
+function buildAuthenticatedEvent(body: string) {
+  return {
+    body,
+    requestContext: {
+      authorizer: {
+        jwt: {
+          claims: {
+            sub: "user-123",
+          },
+        },
+      },
+    },
+  };
+}
+
 describe("createJob handler", () => {
-  const validEvent = {
-    body: JSON.stringify({
+  const validEvent = buildAuthenticatedEvent(
+    JSON.stringify({
       type: "demo",
       payload: {
         name: "sample-job",
       },
     }),
-  };
+  );
 
   const saveMock = vi.mocked(jobRepository.save);
   const sendJobMock = vi.mocked(queueService.sendJob);
@@ -59,6 +74,22 @@ describe("createJob handler", () => {
     });
   });
 
+  it("should return 401 when authentication is missing", async () => {
+    const response = await handler({
+      body: JSON.stringify({
+        type: "demo",
+        payload: {
+          name: "sample-job",
+        },
+      }),
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(parseBody(response)).toEqual({
+      message: "Authentication required",
+    });
+  });
+
   it("should return 202 when request body is valid", async () => {
     const response = await handler(validEvent);
 
@@ -77,6 +108,7 @@ describe("createJob handler", () => {
       expect.objectContaining({
         id: expect.any(String),
         type: "demo",
+        ownerId: "user-123",
         status: "pending",
         payload: {
           name: "sample-job",
@@ -84,6 +116,13 @@ describe("createJob handler", () => {
         attemptCount: 0,
         createdAt: expect.any(String),
         updatedAt: expect.any(String),
+        history: expect.arrayContaining([
+          expect.objectContaining({
+            eventType: "status_change",
+            status: "pending",
+            timestamp: expect.any(String),
+          }),
+        ]),
       }),
     );
   });
@@ -101,32 +140,36 @@ describe("createJob handler", () => {
   });
   
   it("should return 400 when job type is unsupported", async () => {
-  const response = await handler({
-    body: JSON.stringify({
-      type: "sms",
-      payload: {
-        phone: "+905551112233",
-      },
-    }),
-  });
+    const response = await handler(
+      buildAuthenticatedEvent(
+        JSON.stringify({
+          type: "sms",
+          payload: {
+            phone: "+905551112233",
+          },
+        }),
+      ),
+    );
 
-  expect(response.statusCode).toBe(400);
-  expect(parseBody(response)).toEqual({
-    message: "Unsupported job type: sms",
+    expect(response.statusCode).toBe(400);
+    expect(parseBody(response)).toEqual({
+      message: "Unsupported job type: sms",
+    });
   });
-});
 
   it("should return 400 when payload is an empty object", async () => {
-  const response = await handler({
-    body: JSON.stringify({
-      type: "demo",
-      payload: {},
-    }),
-  });
+    const response = await handler(
+      buildAuthenticatedEvent(
+        JSON.stringify({
+          type: "demo",
+          payload: {},
+        }),
+      ),
+    );
 
-  expect(response.statusCode).toBe(400);
-  expect(parseBody(response)).toEqual({
-    message: "Payload cannot be an empty object",
+    expect(response.statusCode).toBe(400);
+    expect(parseBody(response)).toEqual({
+      message: "Payload cannot be an empty object",
+    });
   });
-});
 });
