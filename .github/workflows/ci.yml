@@ -6,6 +6,10 @@ on:
       - main
   pull_request:
 
+permissions:
+  id-token: write
+  contents: read
+    
 jobs:
   backend-test:
     name: Backend Test
@@ -46,3 +50,32 @@ jobs:
       - name: Build frontend
         working-directory: frontend
         run: npm run build
+
+  deploy-backend:
+    name: Deploy Backend
+    runs-on: ubuntu-latest
+    needs:
+      - backend-test
+      - frontend-build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::987454179945:role/Github-Actions-CD-Role
+          aws-region: eu-central-1
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Deploy with Serverless
+        run: npx serverless deploy      
