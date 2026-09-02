@@ -3,3 +3,5 @@ node_modules/
 frontend/dist/
 frontend/.env.local
 frontend/.env.*.local
+.serverless/
+.DS_Store

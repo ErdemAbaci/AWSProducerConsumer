@@ -48,6 +48,13 @@ export function validateListJobsQuery(query?: {
       };
     }
 
+    if (numericLimit > 50) {
+      return {
+        ok: false,
+        message: "limit must be less than or equal to 50",
+      };
+    }
+
     parsedLimit = numericLimit;
   }
 

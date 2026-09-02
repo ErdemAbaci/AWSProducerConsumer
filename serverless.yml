@@ -12,6 +12,7 @@ provider:
   runtime: nodejs18.x
   region: eu-central-1
   stage: dev
+  memorySize: 256
   httpApi:
     cors:
       allowedOrigins:
@@ -35,7 +36,7 @@ provider:
     JOBS_TABLE_NAME: ${self:custom.jobsTableName}
     JOBS_QUEUE_URL:
       Ref: JobsQueue
-    SES_FROM_EMAIL: erdemootv1@gmail.com
+    SES_FROM_EMAIL: ${env:SES_FROM_EMAIL, 'erdemootv1@gmail.com'}
     JOB_EVENTS_TOPIC_ARN:
       Ref: JobEventsTopic
   iam:
@@ -102,6 +103,13 @@ functions:
             name: cognitoJwtAuthorizer
 
 resources:
+  extensions:
+    HttpApiStage:
+      Properties:
+        DefaultRouteSettings:
+          DetailedMetricsEnabled: false
+          ThrottlingBurstLimit: 50
+          ThrottlingRateLimit: 20
   Resources:
     JobsTable:
       Type: AWS::DynamoDB::Table

@@ -14,6 +14,17 @@ describe("validateListJobsQuery", () => {
     });
   });
 
+  it("should fail when limit exceeds 50", () => {
+    const result = validateListJobsQuery({
+      limit: "51",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      message: "limit must be less than or equal to 50",
+    });
+  });
+
   it("should fail when cursor is not valid encoded JSON", () => {
     const result = validateListJobsQuery({
       cursor: "%7Bbad-json",

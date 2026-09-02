@@ -7,7 +7,6 @@ on:
   pull_request:
 
 permissions:
-  id-token: write
   contents: read
     
 jobs:
@@ -54,6 +53,9 @@ jobs:
   deploy-backend:
     name: Deploy Backend
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     needs:
       - backend-test
       - frontend-build
